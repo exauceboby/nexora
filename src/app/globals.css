@@ -1,26 +1,81 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base global minimal */
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: white;
+  color: rgb(15 23 42); /* slate-900 */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =========================================
+   NEXORA Animations (reduced-motion safe)
+   ========================================= */
+
+/* subtle float */
+.nexora-float {
+  animation: nexora-float 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes nexora-float {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* glow on hover */
+.nexora-glow {
+  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.25));
+}
+
+/* loading glow */
+.nexora-loading-glow {
+  background: radial-gradient(
+    closest-side,
+    rgba(34, 211, 238, 0.28),
+    rgba(34, 211, 238, 0.08),
+    transparent
+  );
+  filter: blur(2px);
+}
+
+/* page transition (fade + slight rise) */
+.nexora-page {
+  animation: nexora-page-in 220ms ease-out both;
+}
+
+@keyframes nexora-page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexora-float,
+  .nexora-page {
+    animation: none !important;
+  }
+}
+
+/* Nexora loader */
+.nexora-spin {
+  animation: nexora-spin 900ms linear infinite;
+  transform-origin: center;
+}
+
+@keyframes nexora-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexora-spin {
+    animation: none !important;
+  }
 }
