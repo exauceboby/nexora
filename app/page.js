@@ -549,3 +549,247 @@ function HomePage({ locale, setCurrentPage }) {
     </>
   );
 }
+
+// ============ SERVICES IT PAGE ============
+function ServicesPage({ locale, setCurrentPage }) {
+  const [selectedService, setSelectedService] = useState(null);
+  
+  const iconMap = { Globe, Smartphone, Monitor, Wrench };
+
+  return (
+    <div className="pt-20 min-h-screen">
+      {/* Hero */}
+      <section className="py-24 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 text-center">
+          <Badge className="mb-4 bg-white/10 text-white border-white/20">{locale === 'fr' ? 'DÉVELOPPEMENT & IT' : 'DEVELOPMENT & IT'}</Badge>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+            {locale === 'fr' ? 'Services de Développement' : 'Development Services'}
+          </h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            {locale === 'fr' 
+              ? 'Sites web, applications mobiles, logiciels de gestion — Solutions sur mesure pour votre entreprise'
+              : 'Websites, mobile apps, management software — Custom solutions for your business'}
+          </p>
+        </div>
+      </section>
+
+      {/* Services Grid */}
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-8">
+            {IT_SERVICES.map((service, i) => {
+              const IconComponent = iconMap[service.icon] || Globe;
+              return (
+                <Card key={i} className="overflow-hidden hover:shadow-2xl transition-all group">
+                  <CardContent className="p-8">
+                    <div className="flex items-start gap-6">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg flex-shrink-0">
+                        <IconComponent className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{service.title[locale]}</h3>
+                        <p className="text-gray-600 mb-4">{service.description[locale]}</p>
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="text-sm text-gray-500">{locale === 'fr' ? 'À partir de' : 'Starting from'}</span>
+                          <span className="text-2xl font-bold text-blue-600">${service.startingPrice}</span>
+                        </div>
+                        <ul className="grid grid-cols-2 gap-2 mb-6">
+                          {service.features[locale].map((feature, j) => (
+                            <li key={j} className="flex items-center text-sm text-gray-600">
+                              <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                        <Button onClick={() => setCurrentPage('contact')} className="w-full bg-blue-600 hover:bg-blue-700">
+                          {locale === 'fr' ? 'Demander un Devis' : 'Request Quote'}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Technologies */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-12">{locale === 'fr' ? 'Technologies Maîtrisées' : 'Technologies We Master'}</h2>
+          <div className="flex flex-wrap justify-center gap-4">
+            {TECHNOLOGIES.map((tech, i) => (
+              <div key={i} className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all">
+                <span className="text-xl">{tech.icon}</span>
+                <span className="font-medium text-gray-700">{tech.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-24 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-white mb-6">{locale === 'fr' ? 'Un Projet en Tête ?' : 'Have a Project in Mind?'}</h2>
+          <p className="text-blue-100 mb-8">{locale === 'fr' ? 'Discutons de votre projet et trouvons la meilleure solution ensemble.' : 'Let\'s discuss your project and find the best solution together.'}</p>
+          <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(locale === 'fr' ? 'Bonjour, j\'ai un projet de développement à discuter.' : 'Hello, I have a development project to discuss.')}`, '_blank')} size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+            <MessageCircle className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Discuter sur WhatsApp' : 'Chat on WhatsApp'}
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============ PORTFOLIO PAGE ============
+function PortfolioPage({ locale }) {
+  const [filter, setFilter] = useState('all');
+  const categories = ['all', 'Web', 'Mobile', 'Logiciel', 'Réseau', 'Starlink'];
+
+  const filteredItems = filter === 'all' ? PORTFOLIO_ITEMS : PORTFOLIO_ITEMS.filter(item => item.category === filter);
+
+  return (
+    <div className="pt-20 min-h-screen">
+      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <Badge className="mb-4 bg-white/10 text-white border-white/20">PORTFOLIO</Badge>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{locale === 'fr' ? 'Nos Réalisations' : 'Our Work'}</h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">{locale === 'fr' ? 'Découvrez quelques-uns de nos projets récents' : 'Discover some of our recent projects'}</p>
+        </div>
+      </section>
+
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Filters */}
+          <div className="flex flex-wrap justify-center gap-3 mb-12">
+            {categories.map((cat) => (
+              <Button key={cat} variant={filter === cat ? 'default' : 'outline'} onClick={() => setFilter(cat)} className="rounded-full">
+                {cat === 'all' ? (locale === 'fr' ? 'Tout' : 'All') : cat}
+              </Button>
+            ))}
+          </div>
+
+          {/* Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredItems.map((item) => (
+              <Card key={item.id} className="overflow-hidden group hover:shadow-2xl transition-all">
+                <div className="relative h-48 overflow-hidden">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                    <Badge className="bg-blue-600">{item.category}</Badge>
+                  </div>
+                </div>
+                <CardContent className="p-6">
+                  <p className="text-sm text-blue-600 font-medium mb-1">{item.client} • {item.year}</p>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                  <p className="text-gray-600 text-sm mb-4">{item.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {item.technologies.map((tech, j) => (
+                      <span key={j} className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">{tech}</span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============ STARLINK PAGE ============
+function StarlinkPage({ locale }) {
+  const t = translations[locale];
+  const packs = [
+    { icon: HomeIcon, label: t.starlinkOffer.house, desc: locale === 'fr' ? 'Usage résidentiel' : 'Residential use', price: 650 },
+    { icon: Briefcase, label: t.starlinkOffer.business, desc: locale === 'fr' ? 'PME & Entreprises' : 'SMEs & Enterprises', price: 750 },
+    { icon: GraduationCap, label: t.starlinkOffer.school, desc: locale === 'fr' ? 'Établissements scolaires' : 'Schools', price: 700 },
+    { icon: Coffee, label: t.starlinkOffer.cyber, desc: locale === 'fr' ? 'Cybercafés & Hotspot' : 'Cybercafés & Hotspot', price: 800 }
+  ];
+  
+  return (
+    <div className="pt-20">
+      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30">
+          <img src="https://images.unsplash.com/photo-1516849841032-87cbac4d88f7?w=1920" alt="Starlink" className="w-full h-full object-cover" />
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 text-center">
+          <Badge className="mb-4 bg-blue-500/20 text-blue-300 border-blue-500/30">🛰️ STARLINK EN RDC</Badge>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{t.starlinkOffer.title}</h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-12">{locale === 'fr' ? 'Internet satellite haute performance — Couverture nationale' : 'High-performance satellite internet — National coverage'}</p>
+          
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <Card className="bg-white/10 backdrop-blur border-white/20 text-center p-8">
+              <Satellite className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+              <p className="text-blue-400 font-medium mb-2">{t.starlinkOffer.kit}</p>
+              <p className="text-4xl font-bold text-white">$150</p>
+              <p className="text-gray-400 text-sm mt-2">{locale === 'fr' ? 'minimum à l\'obtention' : 'minimum upfront'}</p>
+            </Card>
+            <Card className="bg-white/10 backdrop-blur border-blue-500/50 text-center p-8 ring-2 ring-blue-500/30">
+              <Zap className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+              <p className="text-blue-400 font-medium mb-2">{t.starlinkOffer.monthly}</p>
+              <p className="text-4xl font-bold text-white">$100</p>
+              <p className="text-gray-400 text-sm mt-2">{locale === 'fr' ? '/ mois × 5 mois' : '/ month × 5 months'}</p>
+            </Card>
+            <Card className="bg-white/10 backdrop-blur border-white/20 text-center p-8">
+              <Star className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+              <p className="text-amber-400 font-medium mb-2">{t.starlinkOffer.subscription}</p>
+              <p className="text-2xl font-bold text-white">{locale === 'fr' ? 'Non inclus' : 'Not included'}</p>
+              <p className="text-gray-400 text-sm mt-2">{locale === 'fr' ? 'abonnement mensuel' : 'monthly subscription'}</p>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">{t.starlinkOffer.packs}</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {packs.map((pack, i) => (
+              <Card key={i} className="text-center p-8 hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer group" onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Je suis intéressé par le pack ${pack.label} Starlink`)}`, '_blank')}>
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <pack.icon className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{pack.label}</h3>
+                <p className="text-gray-600 text-sm mb-4">{pack.desc}</p>
+                <Button variant="outline" className="w-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all">
+                  <MessageCircle className="w-4 h-4 mr-2" /> {locale === 'fr' ? 'Commander' : 'Order'}
+                </Button>
+              </Card>
+            ))}
+          </div>
+
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">{t.faq.title}</h2>
+            <div className="space-y-4">
+              {[{ q: t.faq.q1, a: t.faq.a1 }, { q: t.faq.q2, a: t.faq.a2 }, { q: t.faq.q3, a: t.faq.a3 }, { q: t.faq.q4, a: t.faq.a4 }].map((faq, i) => (
+                <div key={i} className="p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <h4 className="font-semibold text-gray-900 mb-2">{faq.q}</h4>
+                  <p className="text-gray-600">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 bg-gray-50">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">{locale === 'fr' ? 'Demander mon kit Starlink' : 'Request my Starlink kit'}</h2>
+          </div>
+          <Card className="p-8 shadow-xl">
+            <ContactForm locale={locale} type="starlink" />
+          </Card>
+        </div>
+      </section>
+    </div>
+  );
+}
