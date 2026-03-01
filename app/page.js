@@ -793,3 +793,295 @@ function StarlinkPage({ locale }) {
     </div>
   );
 }
+
+// ============ SHOP PAGE ============
+function ShopPage({ locale, setCurrentPage }) {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [ads, setAds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const { addToCart } = useCart();
+
+  useEffect(() => { fetchData(); }, []);
+
+  const fetchData = async () => {
+    try {
+      const [productsRes, categoriesRes, adsRes] = await Promise.all([fetch('/api/products?active=true'), fetch('/api/categories'), fetch('/api/ads?active=true&position=shop')]);
+      const [productsData, categoriesData, adsData] = await Promise.all([productsRes.json(), categoriesRes.json(), adsRes.json()]);
+      if (productsData.success) setProducts(productsData.data);
+      if (categoriesData.success) setCategories(categoriesData.data);
+      if (adsData.success) setAds(adsData.data);
+    } catch (error) { console.error('Error:', error); }
+    setLoading(false);
+  };
+
+  const filteredProducts = products.filter(p => (selectedCategory === 'all' || p.categoryId === selectedCategory) && p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  return (
+    <div className="pt-20 min-h-screen bg-gray-50">
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <Badge className="mb-4 bg-white/20 text-white border-white/30">🛍️ BOUTIQUE</Badge>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">{locale === 'fr' ? 'Notre Boutique' : 'Our Shop'}</h1>
+          <p className="text-xl text-blue-100">{locale === 'fr' ? 'Téléphones, Starlink, Accessoires et plus' : 'Phones, Starlink, Accessories and more'}</p>
+        </div>
+      </section>
+
+      {ads.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="grid md:grid-cols-3 gap-4">
+            {ads.slice(0, 3).map((ad) => (
+              <div key={ad.id} onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Je suis intéressé par: ${ad.title}`)}`, '_blank')} className="relative overflow-hidden rounded-2xl cursor-pointer group">
+                <img src={ad.image} alt={ad.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
+                  <div><h3 className="text-white font-semibold">{ad.title}</h3><p className="text-white/80 text-sm">{ad.description}</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input placeholder={locale === 'fr' ? 'Rechercher...' : 'Search...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-12" />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant={selectedCategory === 'all' ? 'default' : 'outline'} onClick={() => setSelectedCategory('all')} className="rounded-full">{locale === 'fr' ? 'Tout' : 'All'}</Button>
+            {categories.map((cat) => <Button key={cat.id} variant={selectedCategory === cat.id ? 'default' : 'outline'} onClick={() => setSelectedCategory(cat.id)} className="rounded-full">{cat.name}</Button>)}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 pb-16">
+        {loading ? (
+          <div className="flex justify-center py-12"><div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full" /></div>
+        ) : filteredProducts.length > 0 ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} className="group overflow-hidden hover:shadow-xl transition-all">
+                <div className="relative h-48 overflow-hidden bg-gray-100">
+                  {product.images?.[0] ? <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full flex items-center justify-center"><Package className="w-16 h-16 text-gray-300" /></div>}
+                  {product.comparePrice > product.price && <Badge className="absolute top-2 left-2 bg-red-500">-{Math.round((1 - product.price / product.comparePrice) * 100)}%</Badge>}
+                  {product.featured && <Badge className="absolute top-2 right-2 bg-amber-500"><Star className="w-3 h-3" /></Badge>}
+                </div>
+                <CardContent className="p-4">
+                  <p className="text-xs text-blue-600 font-medium mb-1">{product.categoryName || product.brand}</p>
+                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xl font-bold text-gray-900">${product.price}</span>
+                    {product.comparePrice > product.price && <span className="text-sm text-gray-400 line-through">${product.comparePrice}</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => addToCart(product)} className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={product.stock <= 0}>
+                      <ShoppingCart className="w-4 h-4 mr-2" />{product.stock <= 0 ? 'Rupture' : 'Ajouter'}
+                    </Button>
+                    <Button variant="outline" onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Bonjour, je suis intéressé par: ${product.name} ($${product.price})`)}`, '_blank')}>
+                      <MessageCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12"><Package className="w-16 h-16 text-gray-300 mx-auto mb-4" /><p className="text-gray-500 text-lg">{locale === 'fr' ? 'Aucun produit trouvé' : 'No products found'}</p></div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============ CART PAGE ============
+function CartPage({ locale, setCurrentPage }) {
+  const { cart, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
+  const [customerForm, setCustomerForm] = useState({ name: '', phone: '', email: '', address: '' });
+  const [orderSuccess, setOrderSuccess] = useState(null);
+
+  const handleCheckout = () => {
+    if (!customerForm.name || !customerForm.phone) { alert(locale === 'fr' ? 'Veuillez remplir votre nom et téléphone' : 'Please fill your name and phone'); return; }
+    const itemsText = cart.map(item => `- ${item.name} x${item.quantity} = $${item.price * item.quantity}`).join('\n');
+    const msg = `🛒 *Nouvelle Commande NEXORA*\n\n*Client:* ${customerForm.name}\n*Tél:* ${customerForm.phone}\n${customerForm.email ? `*Email:* ${customerForm.email}\n` : ''}${customerForm.address ? `*Adresse:* ${customerForm.address}\n` : ''}\n*Produits:*\n${itemsText}\n\n*TOTAL: $${cartTotal}*`;
+    window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+    setOrderSuccess({ orderNumber: 'WA-' + Date.now() });
+    clearCart();
+  };
+
+  if (orderSuccess) {
+    return (
+      <div className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md mx-4 p-8 text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"><Check className="w-10 h-10 text-green-600" /></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{locale === 'fr' ? 'Commande envoyée !' : 'Order sent!'}</h2>
+          <p className="text-gray-600 mb-6">{locale === 'fr' ? 'Nous vous contacterons bientôt.' : 'We will contact you soon.'}</p>
+          <Button onClick={() => setCurrentPage('shop')} className="w-full">{locale === 'fr' ? 'Continuer' : 'Continue'}</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-20 min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">{locale === 'fr' ? 'Votre Panier' : 'Your Cart'}</h1>
+        {cart.length === 0 ? (
+          <Card className="p-12 text-center">
+            <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-6">{locale === 'fr' ? 'Votre panier est vide' : 'Your cart is empty'}</p>
+            <Button onClick={() => setCurrentPage('shop')}>{locale === 'fr' ? 'Visiter la boutique' : 'Visit shop'}</Button>
+          </Card>
+        ) : (
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              {cart.map((item) => (
+                <Card key={item.id} className="p-4">
+                  <div className="flex gap-4">
+                    <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                      {item.images?.[0] ? <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-gray-300 m-auto" />}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                      <p className="text-blue-600 font-bold">${item.price}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="w-4 h-4" /></Button>
+                        <span className="w-12 text-center font-medium">{item.quantity}</span>
+                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => removeFromCart(item.id)} className="ml-auto text-red-500"><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </div>
+                    <p className="font-bold text-lg">${item.price * item.quantity}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            <Card className="p-6 h-fit sticky top-24">
+              <h3 className="text-lg font-semibold mb-4">{locale === 'fr' ? 'Finaliser' : 'Checkout'}</h3>
+              <div className="space-y-3 mb-6">
+                <Input placeholder={locale === 'fr' ? 'Votre nom *' : 'Your name *'} value={customerForm.name} onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})} />
+                <Input placeholder={locale === 'fr' ? 'Téléphone *' : 'Phone *'} value={customerForm.phone} onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})} />
+                <Input placeholder="Email" value={customerForm.email} onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})} />
+                <Input placeholder={locale === 'fr' ? 'Adresse' : 'Address'} value={customerForm.address} onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})} />
+              </div>
+              <div className="border-t pt-4 mb-6"><div className="flex justify-between text-lg font-bold"><span>Total</span><span>${cartTotal}</span></div></div>
+              <Button onClick={handleCheckout} className="w-full bg-green-500 hover:bg-green-600 h-12 text-lg">
+                <MessageCircle className="w-5 h-5 mr-2" /> {locale === 'fr' ? 'Commander via WhatsApp' : 'Order via WhatsApp'}
+              </Button>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============ ABOUT PAGE ============
+function AboutPage({ locale }) {
+  const t = translations[locale];
+  return (
+    <div className="pt-20">
+      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <Badge className="mb-4 bg-white/10 text-white border-white/20">{locale === 'fr' ? 'À PROPOS' : 'ABOUT US'}</Badge>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{t.about.title}</h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">{t.about.subtitle}</p>
+        </div>
+      </section>
+
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {[{ title: t.about.vision, text: t.about.visionText, icon: Eye }, { title: t.about.mission, text: t.about.missionText, icon: Target }, { title: t.about.values, text: t.about.valuesText, icon: Award }].map((item, i) => (
+              <Card key={i} className="p-8 text-center hover:shadow-xl transition-all">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center mb-6"><item.icon className="w-8 h-8 text-white" /></div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">{item.title}</h3>
+                <p className="text-gray-600">{item.text}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="max-w-xl mx-auto text-center">
+            <Card className="p-8 bg-gradient-to-br from-gray-50 to-blue-50">
+              <img src={SITE_CONFIG.ceo.photo} alt={SITE_CONFIG.ceo.name} className="w-40 h-40 rounded-full mx-auto mb-6 object-cover border-4 border-blue-500 shadow-xl" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{SITE_CONFIG.ceo.name}</h3>
+              <p className="text-blue-600 font-medium mb-2">{SITE_CONFIG.ceo.role}</p>
+              <p className="text-gray-600 mb-4">{SITE_CONFIG.ceo.title}</p>
+              <Badge>{t.about.representativeRole}</Badge>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {STATS.map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-4xl sm:text-5xl font-bold text-white mb-2"><AnimatedCounter end={stat.value} suffix={stat.suffix} /></div>
+                <p className="text-blue-100">{stat.label[locale]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============ CONTACT PAGE ============
+function ContactPage({ locale }) {
+  const t = translations[locale];
+  const contacts = [
+    { icon: Phone, label: '+243 971 037 431', href: 'tel:+243971037431' },
+    { icon: Phone, label: '+243 822 888 909', href: 'tel:+243822888909' },
+    { icon: Mail, label: SITE_CONFIG.contact.email, href: `mailto:${SITE_CONFIG.contact.email}` },
+    { icon: Globe, label: SITE_CONFIG.contact.website, href: `https://${SITE_CONFIG.contact.website}` }
+  ];
+
+  return (
+    <div className="pt-20">
+      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <Badge className="mb-4 bg-white/10 text-white border-white/20">CONTACT</Badge>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{t.contact.title}</h1>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">{t.contact.subtitle}</p>
+        </div>
+      </section>
+
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-16">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-8">{locale === 'fr' ? 'Parlons de Votre Projet' : 'Let\'s Talk About Your Project'}</h2>
+              <p className="text-gray-600 mb-8">{locale === 'fr' ? 'Contactez-nous par téléphone, email ou WhatsApp. Nous répondons rapidement !' : 'Contact us by phone, email or WhatsApp. We respond quickly!'}</p>
+              
+              <div className="space-y-4 mb-8">
+                {contacts.map((contact, i) => (
+                  <a key={i} href={contact.href} className="flex items-center space-x-4 p-4 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors group">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 group-hover:bg-blue-600 flex items-center justify-center transition-colors">
+                      <contact.icon className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
+                    </div>
+                    <span className="font-medium text-gray-900">{contact.label}</span>
+                  </a>
+                ))}
+              </div>
+
+              <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}`, '_blank')} className="w-full bg-green-500 hover:bg-green-600 h-14 text-lg">
+                <MessageCircle className="w-6 h-6 mr-2" /> WhatsApp
+              </Button>
+            </div>
+
+            <Card className="p-8 shadow-xl">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">{locale === 'fr' ? 'Demande de Devis' : 'Quote Request'}</h3>
+              <ContactForm locale={locale} type="quote" />
+            </Card>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
