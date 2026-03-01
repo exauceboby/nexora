@@ -1085,3 +1085,358 @@ function ContactPage({ locale }) {
     </div>
   );
 }
+
+// ============ PORTAL PAGE (ADMIN) ============
+function PortalPage({ locale }) {
+  const { user, login, logout, isAuthenticated } = useAuth();
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginError, setLoginError] = useState('');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [stats, setStats] = useState(null);
+  const [data, setData] = useState({ leads: [], products: [], categories: [], orders: [], users: [], ads: [], articles: [] });
+  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', comparePrice: '', cost: '', categoryId: '', brand: '', stock: '', images: '', featured: false });
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', icon: '' });
+  const [adForm, setAdForm] = useState({ title: '', description: '', image: '', link: '', linkType: 'whatsapp', position: 'shop', active: true });
+  const [editingItem, setEditingItem] = useState(null);
+  const [showDialog, setShowDialog] = useState(null);
+
+  const handleLogin = async (e) => { e.preventDefault(); const result = await login(loginForm.username, loginForm.password); if (!result.success) setLoginError(locale === 'fr' ? 'Identifiants incorrects' : 'Invalid credentials'); else fetchAllData(); };
+
+  const fetchAllData = async () => {
+    try {
+      const results = await Promise.all(['stats', 'leads', 'products', 'categories', 'orders', 'users', 'ads', 'articles'].map(ep => fetch(`/api/${ep}`).then(r => r.json())));
+      setStats(results[0].data);
+      setData({ leads: results[1].data || [], products: results[2].data || [], categories: results[3].data || [], orders: results[4].data || [], users: results[5].data || [], ads: results[6].data || [], articles: results[7].data || [] });
+    } catch (error) { console.error('Error:', error); }
+  };
+
+  useEffect(() => { if (isAuthenticated) fetchAllData(); }, [isAuthenticated]);
+
+  const saveProduct = async () => {
+    const method = editingItem ? 'PUT' : 'POST';
+    const url = editingItem ? `/api/products/${editingItem.id}` : '/api/products';
+    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...productForm, price: parseFloat(productForm.price) || 0, comparePrice: parseFloat(productForm.comparePrice) || 0, cost: parseFloat(productForm.cost) || 0, stock: parseInt(productForm.stock) || 0, images: productForm.images ? productForm.images.split(',').map(s => s.trim()) : [], categoryName: data.categories.find(c => c.id === productForm.categoryId)?.name || '' }) });
+    setProductForm({ name: '', description: '', price: '', comparePrice: '', cost: '', categoryId: '', brand: '', stock: '', images: '', featured: false });
+    setEditingItem(null); setShowDialog(null); fetchAllData();
+  };
+
+  const saveCategory = async () => {
+    const method = editingItem ? 'PUT' : 'POST';
+    const url = editingItem ? `/api/categories/${editingItem.id}` : '/api/categories';
+    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(categoryForm) });
+    setCategoryForm({ name: '', description: '', icon: '' }); setEditingItem(null); setShowDialog(null); fetchAllData();
+  };
+
+  const saveAd = async () => {
+    const method = editingItem ? 'PUT' : 'POST';
+    const url = editingItem ? `/api/ads/${editingItem.id}` : '/api/ads';
+    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adForm) });
+    setAdForm({ title: '', description: '', image: '', link: '', linkType: 'whatsapp', position: 'shop', active: true }); setEditingItem(null); setShowDialog(null); fetchAllData();
+  };
+
+  const deleteItem = async (type, id) => { if (!confirm('Confirmer?')) return; await fetch(`/api/${type}/${id}`, { method: 'DELETE' }); fetchAllData(); };
+  const updateLeadStatus = async (id, status) => { await fetch(`/api/leads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); fetchAllData(); };
+  const updateOrderStatus = async (id, status) => { await fetch(`/api/orders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); fetchAllData(); };
+
+  const printReceipt = (order) => {
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><title>Reçu #${order.orderNumber}</title><style>body{font-family:Arial;padding:20px;max-width:400px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.logo{font-size:24px;font-weight:bold}.item{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #ccc}.total{font-size:18px;font-weight:bold;text-align:right;margin-top:20px;padding-top:10px;border-top:2px solid #000}.footer{text-align:center;margin-top:30px;font-size:12px;color:#666}</style></head><body><div class="header"><div class="logo">NEXORA NTN</div><p>+243 971 037 431</p></div><p><strong>Reçu #${order.orderNumber}</strong></p><p>Date: ${new Date(order.createdAt).toLocaleString()}</p><p>Client: ${order.customer?.name || 'N/A'}</p><p>Tél: ${order.customer?.phone || 'N/A'}</p><div>${order.items?.map(i => `<div class="item"><span>${i.name} x${i.quantity}</span><span>$${i.price * i.quantity}</span></div>`).join('')}</div><div class="total">TOTAL: $${order.total}</div><div class="footer"><p>Merci!</p><p>www.nexora.cd</p></div></body></html>`);
+    w.document.close(); w.print();
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="pt-20 min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <Card className="w-full max-w-md mx-4 p-8">
+          <div className="text-center mb-8">
+            <img src={SITE_CONFIG.logo} alt="NEXORA" className="h-16 w-16 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold">Portail NEXORA</h1>
+            <p className="text-gray-500">Connexion admin</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <Input placeholder="Nom d'utilisateur" value={loginForm.username} onChange={(e) => setLoginForm({...loginForm, username: e.target.value})} />
+            <Input type="password" placeholder="Mot de passe" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} />
+            {loginError && <p className="text-red-500 text-sm text-center">{loginError}</p>}
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">Se connecter</Button>
+          </form>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-20 min-h-screen bg-gray-100">
+      <div className="bg-white border-b sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img src={SITE_CONFIG.logo} alt="NEXORA" className="h-10 w-10" />
+            <div><h1 className="font-bold text-lg">Portail NEXORA</h1><p className="text-sm text-gray-500">{user?.name || 'Admin'}</p></div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={fetchAllData}><Bell className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={logout}><LogOut className="w-4 h-4" /></Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <Card className="p-4"><div className="flex items-center gap-3"><DollarSign className="w-8 h-8 text-blue-600" /><div><p className="text-xs text-gray-500">Revenus</p><p className="text-xl font-bold">${stats.revenue?.total || 0}</p></div></div></Card>
+            <Card className="p-4"><div className="flex items-center gap-3"><ShoppingCart className="w-8 h-8 text-green-600" /><div><p className="text-xs text-gray-500">Commandes</p><p className="text-xl font-bold">{stats.orders?.total || 0}</p></div></div></Card>
+            <Card className="p-4"><div className="flex items-center gap-3"><Package className="w-8 h-8 text-purple-600" /><div><p className="text-xs text-gray-500">Produits</p><p className="text-xl font-bold">{stats.products?.total || 0}</p></div></div></Card>
+            <Card className="p-4"><div className="flex items-center gap-3"><Users className="w-8 h-8 text-amber-600" /><div><p className="text-xs text-gray-500">Leads</p><p className="text-xl font-bold">{stats.leads?.total || 0}</p></div></div></Card>
+            <Card className="p-4"><div className="flex items-center gap-3"><AlertTriangle className="w-8 h-8 text-red-600" /><div><p className="text-xs text-gray-500">Stock bas</p><p className="text-xl font-bold">{stats.products?.lowStock || 0}</p></div></div></Card>
+            <Card className="p-4"><div className="flex items-center gap-3"><Image className="w-8 h-8 text-cyan-600" /><div><p className="text-xs text-gray-500">Pubs</p><p className="text-xl font-bold">{stats.ads?.active || 0}</p></div></div></Card>
+          </div>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-6 flex-wrap">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="products">Produits</TabsTrigger>
+            <TabsTrigger value="categories">Catégories</TabsTrigger>
+            <TabsTrigger value="orders">Commandes</TabsTrigger>
+            <TabsTrigger value="leads">Leads</TabsTrigger>
+            <TabsTrigger value="ads">Publicités</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard">
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card><CardHeader><CardTitle>Commandes récentes</CardTitle></CardHeader><CardContent>{data.orders.slice(0, 5).map(order => (<div key={order.id} className="flex items-center justify-between py-2 border-b last:border-0"><div><p className="font-medium">#{order.orderNumber}</p><p className="text-sm text-gray-500">{order.customer?.name}</p></div><div className="text-right"><p className="font-bold">${order.total}</p><Badge>{order.status}</Badge></div></div>))}</CardContent></Card>
+              <Card><CardHeader><CardTitle>Leads récents</CardTitle></CardHeader><CardContent>{data.leads.slice(0, 5).map(lead => (<div key={lead.id} className="flex items-center justify-between py-2 border-b last:border-0"><div><p className="font-medium">{lead.name}</p><p className="text-sm text-gray-500">{lead.type}</p></div><Badge variant={lead.status === 'NEW' ? 'default' : 'secondary'}>{lead.status}</Badge></div>))}</CardContent></Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="products">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Produits ({data.products.length})</h2>
+              <Dialog open={showDialog === 'product'} onOpenChange={(open) => { setShowDialog(open ? 'product' : null); if (!open) { setEditingItem(null); setProductForm({ name: '', description: '', price: '', comparePrice: '', cost: '', categoryId: '', brand: '', stock: '', images: '', featured: false }); } }}>
+                <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" /> Ajouter</Button></DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader><DialogTitle>{editingItem ? 'Modifier' : 'Nouveau'} Produit</DialogTitle></DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <Input placeholder="Nom *" value={productForm.name} onChange={(e) => setProductForm({...productForm, name: e.target.value})} />
+                    <Textarea placeholder="Description" value={productForm.description} onChange={(e) => setProductForm({...productForm, description: e.target.value})} />
+                    <div className="grid grid-cols-3 gap-4">
+                      <Input type="number" placeholder="Prix *" value={productForm.price} onChange={(e) => setProductForm({...productForm, price: e.target.value})} />
+                      <Input type="number" placeholder="Ancien prix" value={productForm.comparePrice} onChange={(e) => setProductForm({...productForm, comparePrice: e.target.value})} />
+                      <Input type="number" placeholder="Stock" value={productForm.stock} onChange={(e) => setProductForm({...productForm, stock: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Select value={productForm.categoryId} onValueChange={(v) => setProductForm({...productForm, categoryId: v})}><SelectTrigger><SelectValue placeholder="Catégorie" /></SelectTrigger><SelectContent>{data.categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent></Select>
+                      <Input placeholder="Marque" value={productForm.brand} onChange={(e) => setProductForm({...productForm, brand: e.target.value})} />
+                    </div>
+                    <Input placeholder="URLs images (virgule)" value={productForm.images} onChange={(e) => setProductForm({...productForm, images: e.target.value})} />
+                    <label className="flex items-center gap-2"><input type="checkbox" checked={productForm.featured} onChange={(e) => setProductForm({...productForm, featured: e.target.checked})} /> Vedette</label>
+                    <Button onClick={saveProduct} className="w-full">{editingItem ? 'Mettre à jour' : 'Créer'}</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div className="grid gap-4">
+              {data.products.map(product => (
+                <Card key={product.id} className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">{product.images?.[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-gray-300 m-auto" />}</div>
+                    <div className="flex-1"><h3 className="font-semibold">{product.name}</h3><p className="text-sm text-gray-500">{product.categoryName} • Stock: {product.stock}</p><span className="font-bold text-blue-600">${product.price}</span></div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setEditingItem(product); setProductForm({ ...product, price: product.price?.toString(), comparePrice: product.comparePrice?.toString(), stock: product.stock?.toString(), images: product.images?.join(', ') || '' }); setShowDialog('product'); }}><Edit className="w-4 h-4" /></Button>
+                      <Button size="sm" variant="destructive" onClick={() => deleteItem('products', product.id)}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Catégories ({data.categories.length})</h2>
+              <Dialog open={showDialog === 'category'} onOpenChange={(open) => { setShowDialog(open ? 'category' : null); if (!open) { setEditingItem(null); setCategoryForm({ name: '', description: '', icon: '' }); } }}>
+                <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" /> Ajouter</Button></DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>{editingItem ? 'Modifier' : 'Nouvelle'} Catégorie</DialogTitle></DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <Input placeholder="Nom *" value={categoryForm.name} onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})} />
+                    <Input placeholder="Description" value={categoryForm.description} onChange={(e) => setCategoryForm({...categoryForm, description: e.target.value})} />
+                    <Button onClick={saveCategory} className="w-full">{editingItem ? 'Mettre à jour' : 'Créer'}</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.categories.map(cat => (<Card key={cat.id} className="p-4"><div className="flex items-center justify-between"><div><h3 className="font-semibold">{cat.name}</h3><p className="text-sm text-gray-500">{cat.slug}</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => { setEditingItem(cat); setCategoryForm(cat); setShowDialog('category'); }}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="destructive" onClick={() => deleteItem('categories', cat.id)}><Trash2 className="w-4 h-4" /></Button></div></div></Card>))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="orders">
+            <h2 className="text-xl font-bold mb-4">Commandes ({data.orders.length})</h2>
+            <div className="space-y-4">
+              {data.orders.map(order => (
+                <Card key={order.id} className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div><Badge className="mb-2">{order.status}</Badge><h3 className="font-bold">#{order.orderNumber}</h3><p className="text-gray-600">{order.customer?.name} • {order.customer?.phone}</p><p className="text-lg font-bold mt-2">${order.total}</p></div>
+                    <div className="flex flex-col gap-2">
+                      <Select value={order.status} onValueChange={(v) => updateOrderStatus(order.id, v)}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent>{Object.values(ORDER_STATUS).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                      <Button size="sm" variant="outline" onClick={() => printReceipt(order)}><Printer className="w-4 h-4 mr-2" />Imprimer</Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="leads">
+            <h2 className="text-xl font-bold mb-4">Leads ({data.leads.length})</h2>
+            <div className="space-y-4">
+              {data.leads.map(lead => (
+                <Card key={lead.id} className="p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div><div className="flex gap-2 mb-2"><Badge variant={lead.status === 'NEW' ? 'default' : 'secondary'}>{lead.status}</Badge><Badge variant="outline">{lead.type}</Badge></div><h3 className="font-semibold">{lead.name}</h3><p className="text-gray-600">{lead.phone} • {lead.email}</p>{lead.message && <p className="text-sm bg-gray-50 p-2 rounded mt-2">{lead.message}</p>}</div>
+                    <Select value={lead.status} onValueChange={(v) => updateLeadStatus(lead.id, v)}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent>{['NEW', 'CONTACTED', 'CONFIRMED', 'INSTALLED'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="ads">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Publicités ({data.ads.length})</h2>
+              <Dialog open={showDialog === 'ad'} onOpenChange={(open) => { setShowDialog(open ? 'ad' : null); if (!open) { setEditingItem(null); setAdForm({ title: '', description: '', image: '', link: '', linkType: 'whatsapp', position: 'shop', active: true }); } }}>
+                <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" /> Ajouter</Button></DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>{editingItem ? 'Modifier' : 'Nouvelle'} Publicité</DialogTitle></DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <Input placeholder="Titre *" value={adForm.title} onChange={(e) => setAdForm({...adForm, title: e.target.value})} />
+                    <Textarea placeholder="Description" value={adForm.description} onChange={(e) => setAdForm({...adForm, description: e.target.value})} />
+                    <Input placeholder="URL image *" value={adForm.image} onChange={(e) => setAdForm({...adForm, image: e.target.value})} />
+                    <Select value={adForm.position} onValueChange={(v) => setAdForm({...adForm, position: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="home">Accueil</SelectItem><SelectItem value="shop">Boutique</SelectItem></SelectContent></Select>
+                    <Button onClick={saveAd} className="w-full">{editingItem ? 'Mettre à jour' : 'Créer'}</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.ads.map(ad => (<Card key={ad.id} className="overflow-hidden">{ad.image && <img src={ad.image} alt="" className="w-full h-32 object-cover" />}<CardContent className="p-4"><Badge className="mb-2">{ad.active ? 'Actif' : 'Inactif'}</Badge><h3 className="font-semibold">{ad.title}</h3><div className="flex gap-2 mt-4"><Button size="sm" variant="outline" onClick={() => { setEditingItem(ad); setAdForm(ad); setShowDialog('ad'); }}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="destructive" onClick={() => deleteItem('ads', ad.id)}><Trash2 className="w-4 h-4" /></Button></div></CardContent></Card>))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+// ============ FOOTER ============
+function Footer({ locale, setCurrentPage }) {
+  const t = translations[locale];
+  const [email, setEmail] = useState('');
+  
+  const handleNewsletter = (e) => {
+    e.preventDefault();
+    window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Newsletter: ${email}`)}`, '_blank');
+    setEmail('');
+  };
+
+  return (
+    <footer className="bg-slate-900 text-white">
+      {/* Newsletter */}
+      <div className="border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h3 className="text-2xl font-bold mb-2">{locale === 'fr' ? 'Restez Informé' : 'Stay Informed'}</h3>
+              <p className="text-gray-400">{locale === 'fr' ? 'Recevez nos offres et actualités' : 'Receive our offers and news'}</p>
+            </div>
+            <form onSubmit={handleNewsletter} className="flex gap-2 w-full md:w-auto">
+              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 w-64" />
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700"><Send className="w-4 h-4" /></Button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-4 gap-12 mb-12">
+          <div className="md:col-span-2">
+            <div className="flex items-center space-x-2 mb-4">
+              <img src={SITE_CONFIG.logo} alt="NEXORA" className="h-10 w-10" />
+              <span className="font-bold text-xl">NEXORA</span>
+            </div>
+            <p className="text-gray-400 mb-6 max-w-sm">{t.footer.slogan}</p>
+            <div className="space-y-2 text-gray-400 text-sm">
+              {SITE_CONFIG.contact.phones.slice(0, 2).map((p, i) => <p key={i}>{p}</p>)}
+              <p>{SITE_CONFIG.contact.email}</p>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-semibold text-lg mb-4">{locale === 'fr' ? 'Services' : 'Services'}</h4>
+            <ul className="space-y-3 text-gray-400">
+              <li><button onClick={() => setCurrentPage('services')} className="hover:text-white transition-colors">{locale === 'fr' ? 'Développement' : 'Development'}</button></li>
+              <li><button onClick={() => setCurrentPage('starlink')} className="hover:text-white transition-colors">Starlink</button></li>
+              <li><button onClick={() => setCurrentPage('shop')} className="hover:text-white transition-colors">{locale === 'fr' ? 'Boutique' : 'Shop'}</button></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold text-lg mb-4">{locale === 'fr' ? 'Entreprise' : 'Company'}</h4>
+            <ul className="space-y-3 text-gray-400">
+              <li><button onClick={() => setCurrentPage('about')} className="hover:text-white transition-colors">{locale === 'fr' ? 'À propos' : 'About'}</button></li>
+              <li><button onClick={() => setCurrentPage('portfolio')} className="hover:text-white transition-colors">Portfolio</button></li>
+              <li><button onClick={() => setCurrentPage('contact')} className="hover:text-white transition-colors">Contact</button></li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
+          © {new Date().getFullYear()} NEXORA Technologies & Networks. {t.footer.rights}.
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ============ WHATSAPP BUTTON ============
+function WhatsAppButton() {
+  return (
+    <a href={`https://wa.me/${SITE_CONFIG.contact.whatsapp}`} target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/30 hover:scale-110 transition-all">
+      <MessageCircle className="w-7 h-7 text-white" />
+    </a>
+  );
+}
+
+// ============ MAIN APP ============
+export default function App() {
+  const [locale, setLocale] = useState('fr');
+  const [currentPage, setCurrentPage] = useState('home');
+
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [currentPage]);
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'home': return <HomePage locale={locale} setCurrentPage={setCurrentPage} />;
+      case 'services': return <ServicesPage locale={locale} setCurrentPage={setCurrentPage} />;
+      case 'portfolio': return <PortfolioPage locale={locale} />;
+      case 'shop': return <ShopPage locale={locale} setCurrentPage={setCurrentPage} />;
+      case 'cart': return <CartPage locale={locale} setCurrentPage={setCurrentPage} />;
+      case 'starlink': return <StarlinkPage locale={locale} />;
+      case 'about': return <AboutPage locale={locale} />;
+      case 'contact': return <ContactPage locale={locale} />;
+      case 'portal': return <PortalPage locale={locale} />;
+      default: return <HomePage locale={locale} setCurrentPage={setCurrentPage} />;
+    }
+  };
+
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <main className="min-h-screen">
+          <Navigation locale={locale} setLocale={setLocale} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+          {renderPage()}
+          {!['portal', 'cart'].includes(currentPage) && <Footer locale={locale} setCurrentPage={setCurrentPage} />}
+          <WhatsAppButton />
+          <ChatWidget locale={locale} />
+        </main>
+      </CartProvider>
+    </AuthProvider>
+  );
+}
