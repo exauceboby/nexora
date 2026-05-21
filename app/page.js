@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { translations } from '@/lib/translations';
 import { SITE_CONFIG, USER_ROLES, ORDER_STATUS, PAYMENT_METHODS } from '@/lib/constants';
-import { PORTFOLIO_ITEMS, TESTIMONIALS, TECHNOLOGIES, IT_SERVICES, STATS, PROCESS_STEPS, PARTNERS } from '@/lib/data';
+import { PORTFOLIO_ITEMS, TESTIMONIALS, TECHNOLOGIES, IT_SERVICES, STATS, PROCESS_STEPS, PARTNERS, CORE_PILLARS, SERVICE_PACKAGES, MAINTENANCE_PLANS } from '@/lib/data';
 
 // ============ CONTEXT ============
 const CartContext = createContext();
@@ -358,31 +358,31 @@ function HomePage({ locale, setCurrentPage }) {
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
-            {locale === 'fr' ? 'Solutions IT &' : 'IT Solutions &'}<br />
-            <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent animate-gradient">{locale === 'fr' ? 'Connectivité Premium' : 'Premium Connectivity'}</span>
+            {locale === 'fr' ? 'Infrastructure Réseau' : 'Network Infrastructure'}<br />
+            <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent animate-gradient">{locale === 'fr' ? '& Starlink en RDC' : '& Starlink in DRC'}</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto mb-10 leading-relaxed">
             {locale === 'fr' 
-              ? 'Développement web & mobile, logiciels de gestion, Starlink, réseaux Wi-Fi — Excellence et innovation au service de votre croissance.'
-              : 'Web & mobile development, management software, Starlink, Wi-Fi networks — Excellence and innovation for your growth.'}
+              ? 'Installation Starlink certifiée, réseaux d\'entreprise, hotspots et solutions intelligentes — performance, sécurité et supervision 24/7.'
+              : 'Certified Starlink installation, enterprise networks, hotspots and smart solutions — performance, security and 24/7 monitoring.'}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Button onClick={() => setCurrentPage('contact')} size="lg" className="bg-white text-slate-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-2xl group">
-              {locale === 'fr' ? 'Demander un Devis' : 'Request Quote'}
+            <Button onClick={() => setCurrentPage('starlink')} size="lg" className="bg-white text-slate-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-2xl group">
+              <Satellite className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Installer Starlink' : 'Install Starlink'}
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button onClick={() => setCurrentPage('portfolio')} size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg font-semibold">
-              <Play className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Voir nos Réalisations' : 'View Our Work'}
+            <Button onClick={() => setCurrentPage('contact')} size="lg" variant="outline" className="bg-transparent border-2 border-white/40 text-white hover:bg-white/10 hover:border-white px-8 py-6 text-lg font-semibold backdrop-blur-sm">
+              <Target className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Audit Réseau Gratuit' : 'Free Network Audit'}
             </Button>
           </div>
 
           {/* Trust badges */}
           <div className="flex flex-wrap items-center justify-center gap-6 text-white/60 text-sm">
-            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? '150+ Clients' : '150+ Clients'}</span>
-            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? '5 ans d\'expérience' : '5 years experience'}</span>
-            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? 'Support 24/7' : '24/7 Support'}</span>
+            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? '150+ Installations' : '150+ Installations'}</span>
+            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? 'Intervention < 48h' : 'Intervention < 48h'}</span>
+            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? 'Supervision 24/7' : '24/7 Monitoring'}</span>
           </div>
         </div>
 
@@ -407,29 +407,188 @@ function HomePage({ locale, setCurrentPage }) {
         </div>
       </section>
 
-      {/* Services */}
-      <section className="py-24 bg-gray-50">
+      {/* 3 CORE PILLARS — Positionnement stratégique */}
+      <section className="py-24 bg-gradient-to-b from-white to-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
-            <Badge className="mb-4 bg-blue-100 text-blue-700">{locale === 'fr' ? 'NOS SERVICES' : 'OUR SERVICES'}</Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{locale === 'fr' ? 'Solutions Complètes' : 'Complete Solutions'}</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">{locale === 'fr' ? 'Du développement à la connectivité, nous couvrons tous vos besoins technologiques' : 'From development to connectivity, we cover all your technology needs'}</p>
+            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">{locale === 'fr' ? 'NOS 3 SPÉCIALITÉS' : 'OUR 3 SPECIALTIES'}</Badge>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+              {locale === 'fr' ? 'L\'expertise NEXORA en 3 piliers' : 'NEXORA expertise in 3 pillars'}
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {locale === 'fr'
+                ? 'Une mission claire : connecter, sécuriser et digitaliser les entreprises africaines.'
+                : 'A clear mission: connect, secure and digitalize African businesses.'}
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service, index) => (
-              <Card key={index} className="group cursor-pointer border-0 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden" onClick={() => setCurrentPage(service.page)}>
-                <CardContent className="p-8 relative">
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${service.color} opacity-10 rounded-full blur-2xl group-hover:opacity-20 transition-opacity`} />
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${service.color} flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform`}>
-                    <service.icon className="w-7 h-7 text-white" />
+          <div className="grid md:grid-cols-3 gap-6">
+            {CORE_PILLARS.map((pillar, i) => {
+              const IconComponent = { Satellite, Wifi, Layers }[pillar.icon] || Satellite;
+              return (
+                <Card key={i} className="group relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 bg-white">
+                  <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${pillar.color}`} />
+                  <CardContent className="p-8">
+                    <Badge className={`mb-4 bg-gradient-to-r ${pillar.color} text-white border-0`}>{pillar.badge[locale]}</Badge>
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${pillar.color} flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform`}>
+                      <IconComponent className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{pillar.title[locale]}</h3>
+                    <p className="text-blue-600 font-medium mb-4 text-sm">{pillar.tagline[locale]}</p>
+                    <p className="text-gray-600 leading-relaxed mb-6">{pillar.description[locale]}</p>
+                    <ul className="space-y-2 mb-6">
+                      {pillar.bullets[locale].map((bullet, j) => (
+                        <li key={j} className="flex items-start text-sm text-gray-700">
+                          <Check className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button onClick={() => setCurrentPage(pillar.page)} className={`w-full bg-gradient-to-r ${pillar.color} hover:opacity-90 text-white shadow-md group/btn`}>
+                      {pillar.cta[locale]}
+                      <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* SERVICE PACKAGES — Conversion business */}
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{locale === 'fr' ? 'PACKS CLÉS-EN-MAIN' : 'TURNKEY PACKAGES'}</Badge>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+              {locale === 'fr' ? 'Choisissez votre Pack' : 'Choose your Pack'}
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {locale === 'fr'
+                ? 'Des solutions complètes pensées pour votre activité. Installation, configuration et accompagnement inclus.'
+                : 'Complete solutions designed for your business. Installation, setup and support included.'}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {SERVICE_PACKAGES.map((pkg, i) => {
+              const IconComponent = { Briefcase, Building, Shield }[pkg.icon] || Briefcase;
+              const isPopular = !!pkg.badge;
+              return (
+                <Card key={i} className={`relative overflow-hidden border-2 transition-all duration-500 hover:-translate-y-2 ${isPopular ? 'border-amber-400 shadow-2xl scale-105' : 'border-gray-100 shadow-lg hover:shadow-2xl'}`}>
+                  {isPopular && (
+                    <div className="absolute top-0 right-0 left-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2 text-xs font-bold tracking-wider">
+                      ⭐ {pkg.badge[locale]}
+                    </div>
+                  )}
+                  <CardContent className={`p-8 ${isPopular ? 'pt-14' : ''}`}>
+                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${pkg.color} flex items-center justify-center mb-6 shadow-lg`}>
+                      <IconComponent className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-1">{pkg.name[locale]}</h3>
+                    <p className="text-sm text-gray-500 mb-4">{pkg.target[locale]}</p>
+                    <div className="mb-6 pb-6 border-b border-gray-100">
+                      <span className="text-3xl font-bold text-blue-600">{pkg.price[locale]}</span>
+                    </div>
+                    <ul className="space-y-3 mb-8">
+                      {pkg.features[locale].map((feature, j) => (
+                        <li key={j} className="flex items-start text-sm text-gray-700">
+                          <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${pkg.color} flex items-center justify-center mr-3 mt-0.5 flex-shrink-0`}>
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button onClick={() => setCurrentPage('contact')} className={`w-full ${isPopular ? `bg-gradient-to-r ${pkg.color} hover:opacity-90` : 'bg-gray-900 hover:bg-gray-800'} text-white shadow-md group/btn`}>
+                      {locale === 'fr' ? 'Demander ce Pack' : 'Request this Pack'}
+                      <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-gray-600 mb-4">{locale === 'fr' ? 'Besoin d\'une solution sur mesure ?' : 'Need a custom solution?'}</p>
+            <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}`, '_blank')} variant="outline" className="border-2 border-green-500 text-green-600 hover:bg-green-50">
+              <MessageCircle className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Parler à un Expert' : 'Talk to an Expert'}
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* MAINTENANCE PLANS — Revenu récurrent */}
+      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-violet-100 text-violet-700 hover:bg-violet-100">{locale === 'fr' ? 'CONTRATS DE MAINTENANCE' : 'MAINTENANCE CONTRACTS'}</Badge>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+              {locale === 'fr' ? 'Restez connecté. Toujours.' : 'Stay connected. Always.'}
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {locale === 'fr'
+                ? 'Au-delà de l\'installation, nous restons à vos côtés avec des contrats de maintenance et supervision adaptés.'
+                : 'Beyond installation, we stay by your side with adapted maintenance and supervision contracts.'}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {MAINTENANCE_PLANS.map((plan, i) => (
+              <Card key={i} className={`relative overflow-hidden transition-all duration-500 hover:-translate-y-2 ${plan.popular ? 'border-2 border-blue-500 shadow-2xl' : 'border border-gray-200 shadow-lg hover:shadow-2xl'}`}>
+                {plan.popular && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">
+                    {locale === 'fr' ? 'RECOMMANDÉ' : 'RECOMMENDED'}
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">{service.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{service.desc}</p>
-                  <ArrowRight className="w-5 h-5 text-blue-600 mt-4 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-2 transition-all" />
+                )}
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name[locale]}</h3>
+                  <p className="text-sm text-gray-500 mb-6">{plan.description[locale]}</p>
+                  <div className="mb-6 pb-6 border-b border-gray-100">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold text-gray-900">{locale === 'fr' ? 'Sur devis' : 'Custom'}</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">{plan.period[locale]}</p>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    {plan.features[locale].map((feature, j) => (
+                      <li key={j} className="flex items-start text-sm text-gray-700">
+                        <Check className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${plan.popular ? 'text-blue-600' : 'text-green-500'}`} />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button onClick={() => setCurrentPage('contact')} className={`w-full ${plan.popular ? `bg-gradient-to-r ${plan.color} hover:opacity-90` : 'bg-gray-900 hover:bg-gray-800'} text-white shadow-md`}>
+                    {locale === 'fr' ? 'Souscrire' : 'Subscribe'}
+                  </Button>
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          <div className="mt-16 grid md:grid-cols-4 gap-6 text-center">
+            <div className="p-6">
+              <Headphones className="w-10 h-10 mx-auto mb-3 text-blue-600" />
+              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Support Réactif' : 'Responsive Support'}</h4>
+              <p className="text-sm text-gray-600">{locale === 'fr' ? 'Réponse sous 1h en heures ouvrables' : '1h response during business hours'}</p>
+            </div>
+            <div className="p-6">
+              <Server className="w-10 h-10 mx-auto mb-3 text-emerald-600" />
+              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Supervision NOC' : 'NOC Supervision'}</h4>
+              <p className="text-sm text-gray-600">{locale === 'fr' ? 'Surveillance proactive de votre réseau' : 'Proactive network monitoring'}</p>
+            </div>
+            <div className="p-6">
+              <Shield className="w-10 h-10 mx-auto mb-3 text-violet-600" />
+              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Sécurité Continue' : 'Continuous Security'}</h4>
+              <p className="text-sm text-gray-600">{locale === 'fr' ? 'Mises à jour & patchs automatiques' : 'Auto updates & patches'}</p>
+            </div>
+            <div className="p-6">
+              <Clock className="w-10 h-10 mx-auto mb-3 text-amber-600" />
+              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Disponibilité 99.9%' : '99.9% Uptime'}</h4>
+              <p className="text-sm text-gray-600">{locale === 'fr' ? 'SLA garantis pour pack Entreprise' : 'SLA guaranteed for Enterprise'}</p>
+            </div>
           </div>
         </div>
       </section>
@@ -534,14 +693,17 @@ function HomePage({ locale, setCurrentPage }) {
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
         </div>
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">{locale === 'fr' ? 'Prêt à Transformer Votre Business ?' : 'Ready to Transform Your Business?'}</h2>
-          <p className="text-xl text-blue-100 mb-10">{locale === 'fr' ? 'Contactez-nous pour un devis gratuit et personnalisé.' : 'Contact us for a free personalized quote.'}</p>
+          <Badge className="mb-4 bg-white/10 text-white border-white/20 hover:bg-white/10">{locale === 'fr' ? '🎁 OFFRE LIMITÉE' : '🎁 LIMITED OFFER'}</Badge>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">{locale === 'fr' ? 'Audit Réseau Gratuit pour Votre Entreprise' : 'Free Network Audit for Your Business'}</h2>
+          <p className="text-xl text-blue-100 mb-10">{locale === 'fr' ? 'Diagnostic complet de votre infrastructure + recommandations personnalisées. Sans engagement.' : 'Complete diagnosis of your infrastructure + personalized recommendations. No obligation.'}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button onClick={() => setCurrentPage('contact')} size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-2xl">
-              {locale === 'fr' ? 'Obtenir un Devis' : 'Get a Quote'}
+            <Button onClick={() => setCurrentPage('contact')} size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-2xl group">
+              <Target className="mr-2 w-5 h-5" />
+              {locale === 'fr' ? 'Demander mon Audit Gratuit' : 'Request my Free Audit'}
+              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}`, '_blank')} size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg font-semibold">
-              <MessageCircle className="mr-2 w-5 h-5" /> WhatsApp
+            <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(locale === 'fr' ? 'Bonjour NEXORA, je souhaite parler à un expert.' : 'Hello NEXORA, I want to talk to an expert.')}`, '_blank')} size="lg" variant="outline" className="bg-transparent border-2 border-white/40 text-white hover:bg-white/10 hover:border-white px-8 py-6 text-lg font-semibold backdrop-blur-sm">
+              <MessageCircle className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Parler à un Expert' : 'Talk to an Expert'}
             </Button>
           </div>
         </div>

@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://nexora-premium-2.preview.emergentagent.com/api"
+BASE_URL = "https://corporate-shop-test.preview.emergentagent.com/api"
 ADMIN_PASSWORD = "nexora2024admin"
 
 class NEXORAAPITester:
