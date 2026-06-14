@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail, getLeadNotificationEmail, getOrderConfirmationEmail, CONTACT_EMAIL } from '@/lib/resend';
-import { USER_ROLES, ORDER_STATUS, PAYMENT_METHODS } from '@/lib/constants';
+import { SITE_CONFIG, USER_ROLES, ORDER_STATUS, PAYMENT_METHODS } from '@/lib/constants';
 
 // CORS headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': process.env.CORS_ORIGINS || '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
@@ -835,11 +835,11 @@ async function generateReceipt(request) {
       paymentMethod: order.paymentMethod,
       generatedAt: new Date().toISOString(),
       company: {
-        name: 'NEXORA Technologies & Networks',
-        address: 'RDC',
-        phone: '+243 971 037 431',
-        email: 'nexorainfo@nexora.com',
-        website: 'www.nexora.cd'
+        name: SITE_CONFIG.name,
+        address: process.env.COMPANY_ADDRESS || '',
+        phone: SITE_CONFIG.contact.phones.filter(Boolean).join(' / '),
+        email: SITE_CONFIG.contact.email,
+        website: SITE_CONFIG.contact.website
       }
     };
     
