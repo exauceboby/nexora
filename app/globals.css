@@ -64,6 +64,34 @@
   html {
     scroll-behavior: smooth;
   }
+
+  select option {
+    background: #ffffff;
+    color: #0f172a;
+  }
+
+  select option:checked {
+    background: #1d4ed8;
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  .nexora-logo-plate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(103, 232, 249, 0.18);
+    border-radius: 8px;
+    background: #07111f;
+    padding: 8px 12px;
+    box-shadow: 0 10px 24px rgba(2, 8, 23, 0.12);
+  }
+
+  .nexora-logo-plate img {
+    display: block;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.28));
+  }
 }
 
 @layer utilities {

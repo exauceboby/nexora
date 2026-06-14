@@ -1,1604 +1,3510 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext, useRef } from 'react';
-import { 
-  Satellite, Wifi, Globe, Code, Shield, Zap, Users, Award, 
-  ChevronRight, Menu, X, Phone, Mail, MapPin, ArrowRight,
-  Check, Star, MessageCircle, Building, GraduationCap, Coffee,
-  Home as HomeIcon, Briefcase, ShoppingCart, Package, Plus, Minus,
-  Trash2, Search, Filter, Eye, Edit, Printer, Download, LogOut,
-  BarChart3, Settings, Bell, User, FileText, Image, Tag, Layers,
-  ChevronDown, ExternalLink, TrendingUp, DollarSign, Box, AlertTriangle,
-  Smartphone, Monitor, Wrench, Rocket, Play, Quote, ChevronUp, Send,
-  Clock, Target, Headphones, Database, Server, Layout
+import { useEffect, useMemo, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import {
+  AlertTriangle,
+  ArrowRight,
+  BadgeCheck,
+  Banknote,
+  BarChart3,
+  Bell,
+  BriefcaseBusiness,
+  Building2,
+  Car,
+  CheckCircle2,
+  ChevronRight,
+  Cloud,
+  Code2,
+  CreditCard,
+  FileCheck2,
+  Filter,
+  Headphones,
+  Home as HomeIcon,
+  Image as ImageIcon,
+  Landmark,
+  Layers3,
+  LogIn,
+  Lock,
+  Mail,
+  MapPin,
+  Menu,
+  MessageCircle,
+  PackageCheck,
+  Plus,
+  ReceiptText,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Smartphone,
+  Store,
+  Truck,
+  Upload,
+  UserCheck,
+  UserCircle,
+  UserPlus,
+  Users,
+  Wallet,
+  X,
+  Zap,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { translations } from '@/lib/translations';
-import { SITE_CONFIG, USER_ROLES, ORDER_STATUS, PAYMENT_METHODS } from '@/lib/constants';
-import { PORTFOLIO_ITEMS, TESTIMONIALS, TECHNOLOGIES, IT_SERVICES, STATS, PROCESS_STEPS, PARTNERS, CORE_PILLARS, SERVICE_PACKAGES, MAINTENANCE_PLANS } from '@/lib/data';
+import { sessionActions, uiActions } from '@/lib/redux/slices';
 
-// ============ CONTEXT ============
-const CartContext = createContext();
-const AuthContext = createContext();
+const STORAGE_KEY = 'nexora_marketplace_v1';
+const AUTH_KEY = 'nexora_auth_v1';
 
-function CartProvider({ children }) {
-  const [cart, setCart] = useState([]);
-  const addToCart = (product, quantity = 1) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
-      return [...prev, { ...product, quantity }];
-    });
+const cities = ['Kinshasa', 'Lubumbashi', 'Goma', 'Bukavu', 'Kisangani', 'Bunia', 'Isiro', 'Mbuji-Mayi', 'Kananga', 'Matadi'];
+
+const categoryDepartments = [
+  { name: 'Telephones & accessoires', category: 'Telephones', icon: Smartphone },
+  { name: 'Informatique & reseaux', category: 'Informatique', icon: Code2 },
+  { name: 'Energie & electronique', category: 'Electronique', icon: Zap },
+  { name: 'Maison & construction', category: 'Construction', icon: Building2 },
+  { name: 'Logistique & transport', category: 'Logistique', icon: Truck },
+  { name: 'Services cloud & logiciels', category: 'Cloud', icon: Cloud },
+  { name: 'Mode & accessoires', category: 'Apparel', icon: ShoppingBag },
+  { name: 'Machines industrielles', category: 'Machinery', icon: PackageCheck },
+  { name: 'Automobile & motos', category: 'Automotive', icon: Car },
+  { name: 'Agriculture & alimentation', category: 'Agriculture', icon: Store },
+];
+
+const topMarketplaceLinks = [
+  { label: 'Toutes les categories', target: 'market' },
+  { label: 'Selections premium', target: 'market' },
+  { label: 'Protection commande', target: 'wallet' },
+  { label: 'Espace acheteur', target: 'rfq' },
+  { label: 'Centre aide', target: 'messaging' },
+  { label: 'App & mobile', target: 'profile' },
+  { label: 'Vendre sur Nexora', target: 'market' },
+];
+
+const frequentSearches = ['Smartphone 5G', 'Drones', 'Motos electriques', 'Montres connectees', 'Voitures', 'Motos', 'Trottinettes electriques', 'Ordinateurs', 'Telephones', 'Kits solaires'];
+
+const sourcingSteps = [
+  { title: 'Search products', text: 'Compare prices, MOQ, suppliers and delivery terms.' },
+  { title: 'Contact suppliers', text: 'Chat, ask for samples, negotiate and request proforma.' },
+  { title: 'Pay with escrow', text: 'Funds stay protected until delivery is accepted.' },
+  { title: 'Track and resolve', text: 'Delivery proof, dispute center and seller payout.' },
+];
+
+const marketplaceShowcase = [
+  {
+    title: 'Toutes les categories',
+    text: 'Parcourez vetements, electronique, maison, sports, bijoux, beaute, logistique, machines, automobile et agriculture.',
+    items: ['Categories pour vous', 'Recherches frequentes', 'Produits recommandes', 'Nouveaux fabricants'],
+  },
+  {
+    title: 'Fabricants verifies',
+    text: 'Trouvez des fournisseurs agrees avec verification KYC, niveau fournisseur, catalogue, echantillons et contact direct.',
+    items: ['Recherche usine', 'Meilleurs fournisseurs', 'Echantillons', 'Salons et selection premium'],
+  },
+  {
+    title: 'Protection de commande',
+    text: 'Paiement securise, livraison dans les delais, remboursement, preuve de livraison, litige et arbitrage Nexora.',
+    items: ['Paiements surs', 'Politique de remboursement', 'Logistique', 'Service apres-vente'],
+  },
+  {
+    title: 'Espace acheteur',
+    text: 'Commandes, panier, favoris, messages, demandes de devis, suivi de statut et centre de support.',
+    items: ['Panier', 'Commandes', 'Messages', 'Demandes de prix'],
+  },
+  {
+    title: 'Vendre sur Nexora',
+    text: 'Creation de boutique, publication produits, gestion du stock, devis, paiements, retraits et verification vendeur.',
+    items: ['Centre vendeur', 'Devenir fournisseur verifie', 'Partenariats', 'Application fournisseurs'],
+  },
+  {
+    title: 'Parametres internationaux',
+    text: 'Pays ou region, adresse de livraison, langue, devise, code postal, taxes, exoneration et preferences d’achat.',
+    items: ['Adresse livraison', 'Langue', 'Devise', 'Programme fiscal'],
+  },
+];
+
+const buyerTools = [
+  ['Compte', 'Connexion, inscription, compte social, profil, securite et historique.'],
+  ['Panier', 'Panier vide ou rempli, acces panier, quantites, prix, taxes et livraison.'],
+  ['Adresse', 'Pays, region, ville, code postal et adresse libre saisie par l’utilisateur.'],
+  ['Langue et devise', 'Selection de langue, devise et preferences modifiables.'],
+  ['Recherche image', 'Extension type Lens pour chercher un produit a partir d’une image.'],
+  ['Application mobile', 'Acces mobile pour acheter, vendre, discuter, suivre et payer.'],
+];
+
+const footerGroups = [
+  ['Obtenir de l’aide', ['Centre assistance', 'Discussion en direct', 'Verifier le statut de commande', 'Remboursements', 'Signaler un abus']],
+  ['Paiements et protections', ['Paiements surs et faciles', 'Politique de remboursement', 'Livraison a temps', 'Suivi de production', 'Services inspection']],
+  ['Approvisionnement', ['Demande de devis', 'Programme de conformite fiscale', 'Fabricants verifies', 'Echantillons', 'Personnalisation rapide']],
+  ['Vendre sur Nexora', ['Commencer a vendre', 'Centre vendeurs', 'Devenir fournisseur verifie', 'Partenariats', 'Application fournisseurs']],
+  ['Nexora', ['A propos', 'Politiques de conformite', 'Centre de nouvelles', 'Carrieres', 'Respect de l’integrite']],
+];
+
+const categoryImages = {
+  Telephones: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=80',
+  Informatique: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80',
+  Electronique: 'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=900&q=80',
+  Construction: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=900&q=80',
+  Logistique: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=900&q=80',
+  Cloud: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=900&q=80',
+  Apparel: 'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=900&q=80',
+  Machinery: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=900&q=80',
+  Automotive: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80',
+  Agriculture: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=80',
+};
+
+const modules = [
+  { id: 'market', label: 'Market', icon: Store, color: 'emerald' },
+  { id: 'cab', label: 'Cab', icon: Car, color: 'amber' },
+  { id: 'cloud', label: 'Cloud', icon: Cloud, color: 'sky' },
+  { id: 'software', label: 'Software', icon: Code2, color: 'violet' },
+  { id: 'logistics', label: 'Logistics', icon: Truck, color: 'lime' },
+  { id: 'wallet', label: 'Wallet', icon: Wallet, color: 'rose' },
+];
+
+const roles = [
+  'SUPER_ADMIN',
+  'ADMIN_NATIONAL',
+  'ADMIN_VILLE',
+  'FINANCE',
+  'RESPONSABLE_COMMERCIAL',
+  'AGENT_TERRAIN',
+  'SUPPORT',
+  'VENDEUR',
+  'FOURNISSEUR',
+  'ACHETEUR',
+  'CHAUFFEUR',
+  'LIVREUR',
+  'DEVELOPPEUR_PARTENAIRE',
+  'CLIENT_CLOUD',
+];
+
+const emptyPlatformState = {
+  currentUserId: '',
+  users: [],
+  shops: [],
+  commissionRules: [],
+  products: [],
+  orders: [],
+  rides: [],
+  deliveries: [],
+  software: [],
+  cloudRequests: [],
+  kyc: [],
+  transactions: [],
+  withdrawals: [],
+  messages: [],
+  notifications: [],
+  auditLogs: [],
+  rfqs: [],
+  quotes: [],
+  favorites: [],
+  disputes: [],
+};
+
+const anonymousUser = {
+  id: '',
+  name: 'Nexora User',
+  role: 'ACHETEUR',
+  phone: '',
+  email: '',
+  city: 'Kinshasa',
+  kycStatus: 'PENDING',
+  status: 'PENDING',
+  availableBalance: 0,
+  blockedBalance: 0,
+  avatarUrl: '',
+  companyName: '',
+  address: '',
+};
+
+
+function normalizeState(saved) {
+  const base = { ...emptyPlatformState, ...(saved || {}) };
+  return {
+    ...base,
+    users: (base.users || []).map((user) => ({
+      status: 'ACTIVE',
+      availableBalance: 0,
+      blockedBalance: 0,
+      avatarUrl: '',
+      companyName: '',
+      address: '',
+      ...user,
+    })),
+    currentUserId: base.currentUserId || base.users?.[0]?.id || '',
+    shops: base.shops || [],
+    commissionRules: base.commissionRules || [],
+    products: (base.products || []).map((product) => ({
+      shopId: '',
+      sku: `SKU-${product.id || Date.now()}`,
+      subcategory: '',
+      condition: 'Neuf',
+      pickupAddress: product.city || '',
+      promoPrice: 0,
+      status: 'APPROVED',
+      rejectionReason: '',
+      commissionRate: 8,
+      moq: 1,
+      wholesalePrice: Number(product.price || 0),
+      leadTime: '48h',
+      b2bEnabled: false,
+      origin: 'RDC',
+      certifications: [],
+      imageUrl: imageForCategory(product.category),
+      minOrderValue: Number(product.price || 0),
+      tradeAssurance: true,
+      ...product,
+    })),
+    orders: (base.orders || []).map((order) => ({
+      deliveryStatus: 'PENDING',
+      commission: Number(order.total || 0) * 0.08,
+      ...order,
+    })),
+    withdrawals: base.withdrawals || [],
+    auditLogs: base.auditLogs || [],
+    notifications: base.notifications || [],
+    messages: base.messages || [],
+    transactions: base.transactions || [],
+    rfqs: base.rfqs || [],
+    quotes: base.quotes || [],
+    favorites: base.favorites || [],
+    disputes: base.disputes || [],
   };
-  const removeFromCart = (productId) => setCart(prev => prev.filter(item => item.id !== productId));
-  const updateQuantity = (productId, quantity) => { if (quantity <= 0) { removeFromCart(productId); return; } setCart(prev => prev.map(item => item.id === productId ? { ...item, quantity } : item)); };
-  const clearCart = () => setCart([]);
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  return <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount }}>{children}</CartContext.Provider>;
-}
-function useCart() { return useContext(CartContext); }
-
-function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const login = async (username, password) => {
-    const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-    const data = await res.json();
-    if (data.success) { setUser(data.user); setToken(data.token); return { success: true }; }
-    return { success: false, error: data.error };
-  };
-  const logout = () => { setUser(null); setToken(null); };
-  return <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user }}>{children}</AuthContext.Provider>;
-}
-function useAuth() { return useContext(AuthContext); }
-
-// ============ ANIMATED COUNTER ============
-function AnimatedCounter({ end, suffix = '', duration = 2000 }) {
-  const [count, setCount] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setIsVisible(true); }, { threshold: 0.1 });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    let start = 0;
-    const increment = end / (duration / 16);
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) { setCount(end); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [isVisible, end, duration]);
-
-  return <span ref={ref}>{count}{suffix}</span>;
 }
 
-// ============ SCROLL ANIMATION HOOK ============
-function useScrollAnimation() {
-  const ref = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setIsVisible(true); }, { threshold: 0.1, rootMargin: '50px' });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, isVisible];
+function uid(prefix) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-// ============ CHATBOT WIDGET ============
-function ChatWidget({ locale }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { from: 'bot', text: locale === 'fr' ? 'Bonjour ! Comment puis-je vous aider ?' : 'Hello! How can I help you?' }
-  ]);
-  const [input, setInput] = useState('');
+function currency(value) {
+  return new Intl.NumberFormat('fr-CD', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
+}
 
-  const quickReplies = locale === 'fr' 
-    ? ['Prix Starlink', 'Devis site web', 'Support technique', 'Parler à un conseiller']
-    : ['Starlink prices', 'Website quote', 'Technical support', 'Talk to advisor'];
+function normalizeCategory(value) {
+  const text = String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/Ã©|Ã‰|é|É/g, 'e')
+    .toLowerCase();
+  if (text.includes('phone') || text.includes('tel')) return 'Telephones';
+  if (text.includes('info') || text.includes('reseau') || text.includes('rã') || text.includes('ré')) return 'Informatique';
+  if (text.includes('elect') || text.includes('solar') || text.includes('energie')) return 'Electronique';
+  if (text.includes('construct') || text.includes('maison')) return 'Construction';
+  if (text.includes('logistique') || text.includes('transport')) return 'Logistique';
+  if (text.includes('cloud') || text.includes('software')) return 'Cloud';
+  if (text.includes('mode') || text.includes('apparel') || text.includes('fashion')) return 'Apparel';
+  if (text.includes('machine') || text.includes('industrial')) return 'Machinery';
+  if (text.includes('auto') || text.includes('moto') || text.includes('car')) return 'Automotive';
+  if (text.includes('agri') || text.includes('food') || text.includes('aliment')) return 'Agriculture';
+  return value || 'Autres';
+}
 
-  const handleQuickReply = (reply) => {
-    setMessages(prev => [...prev, { from: 'user', text: reply }]);
-    setTimeout(() => {
-      const botReply = locale === 'fr' 
-        ? 'Pour une réponse rapide, contactez-nous directement sur WhatsApp !' 
-        : 'For a quick response, contact us directly on WhatsApp!';
-      setMessages(prev => [...prev, { from: 'bot', text: botReply }]);
-    }, 500);
-  };
+function imageForCategory(value) {
+  return categoryImages[normalizeCategory(value)] || '/images/nexora-ecosystem-hero.png';
+}
 
-  const openWhatsApp = () => {
-    const msg = locale === 'fr' ? 'Bonjour NEXORA, je souhaite des informations.' : 'Hello NEXORA, I would like some information.';
-    window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+function statusClass(status) {
+  const value = String(status || '').toUpperCase();
+  if (['VERIFIED', 'RELEASED', 'DELIVERED', 'COMPLETED', 'APPROVED', 'PAID', 'ACCEPTED', 'AWARDED', 'RESOLVED', 'GOLD'].includes(value)) {
+    return 'bg-emerald-100 text-emerald-800 ring-emerald-200';
+  }
+  if (['PENDING', 'PAYMENT_PENDING', 'PICKUP_PENDING', 'SCOPING', 'OPEN', 'SENT'].includes(value)) {
+    return 'bg-amber-100 text-amber-800 ring-amber-200';
+  }
+  if (['ESCROW_HOLD', 'DRIVER_ASSIGNED', 'IN_TRANSIT', 'CONFIRMED'].includes(value)) {
+    return 'bg-blue-100 text-blue-800 ring-blue-200';
+  }
+  if (['DISPUTED', 'REJECTED', 'REFUNDED', 'CANCELLED', 'SUSPENDED'].includes(value)) {
+    return 'bg-rose-100 text-rose-800 ring-rose-200';
+  }
+  return 'bg-slate-100 text-slate-700 ring-slate-200';
+}
+
+function Badge({ children }) {
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${statusClass(children)}`}>{children}</span>;
+}
+
+function Metric({ icon: Icon, label, value, note }) {
+  return (
+    <div className="rounded-lg border border-cyan-100/80 bg-white/90 p-5 shadow-sm shadow-blue-950/5 backdrop-blur">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-500">{label}</p>
+          <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
+        </div>
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-cyan-50 text-blue-700 ring-1 ring-cyan-100">
+          <Icon className="h-5 w-5" />
+        </span>
+      </div>
+      {note && <p className="mt-3 text-xs font-medium text-slate-500">{note}</p>}
+    </div>
+  );
+}
+
+function Panel({ title, icon: Icon, action, children }) {
+  return (
+    <section className="rounded-lg border border-cyan-100/80 bg-white/95 shadow-sm shadow-blue-950/5 backdrop-blur">
+      <div className="flex items-center justify-between gap-4 border-b border-cyan-50 px-5 py-4">
+        <div className="flex items-center gap-3">
+          {Icon && <Icon className="h-5 w-5 text-blue-700" />}
+          <h2 className="text-lg font-black text-slate-950">{title}</h2>
+        </div>
+        {action}
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Input(props) {
+  return (
+    <input
+      {...props}
+      className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+    />
+  );
+}
+
+function Select(props) {
+  return (
+    <select
+      {...props}
+      className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+    />
+  );
+}
+
+function Textarea(props) {
+  return (
+    <textarea
+      {...props}
+      className="min-h-24 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+    />
+  );
+}
+
+function Button({ children, variant = 'primary', className = '', ...props }) {
+  const styles = {
+    primary: 'bg-gradient-to-r from-cyan-500 to-blue-700 text-white shadow-lg shadow-blue-900/15 hover:from-cyan-400 hover:to-blue-600',
+    dark: 'bg-[#07111f] text-white hover:bg-[#0d1d34]',
+    light: 'bg-white text-slate-950 ring-1 ring-slate-200 hover:bg-slate-50',
+    danger: 'bg-rose-600 text-white hover:bg-rose-700',
+    ghost: 'bg-white/10 text-white ring-1 ring-cyan-200/20 hover:bg-white/15',
   };
 
   return (
-    <>
-      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-24 right-6 z-50 w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/30 hover:scale-110 transition-all">
-        {isOpen ? <X className="w-6 h-6 text-white" /> : <MessageCircle className="w-6 h-6 text-white" />}
-      </button>
-      
-      {isOpen && (
-        <div className="fixed bottom-40 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 text-white">
-            <h3 className="font-semibold">NEXORA Assistant</h3>
-            <p className="text-sm text-blue-100">{locale === 'fr' ? 'Réponse rapide' : 'Quick response'}</p>
+    <button
+      {...props}
+      className={`inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PublicMarketplace({ query, setQuery, products, users, cart, setCart }) {
+  const dispatch = useDispatch();
+  const [openPanel, setOpenPanel] = useState('');
+  const [activeCategory, setActiveCategory] = useState(categoryDepartments[0]?.category || 'Telephones');
+  const [searchType, setSearchType] = useState('Produits');
+  const [region, setRegion] = useState('Uganda');
+  const [language, setLanguage] = useState('Francais');
+  const [publicCurrency, setPublicCurrency] = useState('USD');
+  const [rfqOpen, setRfqOpen] = useState(false);
+  const [classifiedOpen, setClassifiedOpen] = useState(false);
+  const [lensOpen, setLensOpen] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const fallbackProducts = [
+    { id: 'fallback-phone', name: 'Smartphone 5G debloque gros et detail', category: 'Telephones', city: 'Kampala', origin: 'UG', price: 189, wholesalePrice: 169, moq: 5, stock: 240, rating: 4.8, sponsored: true, tradeAssurance: true, imageUrl: categoryImages.Telephones, sellerId: 'public-seller-1' },
+    { id: 'fallback-drone', name: 'Drone 4K pliable pour boutiques et revendeurs', category: 'Electronique', city: 'Kampala', origin: 'CN', price: 79, wholesalePrice: 64, moq: 10, stock: 170, rating: 4.6, sponsored: true, tradeAssurance: true, imageUrl: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=900&q=80', sellerId: 'public-seller-2' },
+    { id: 'fallback-logistics', name: 'Service fret maritime et aerien porte a porte', category: 'Logistique', city: 'Entebbe', origin: 'UG', price: 35, wholesalePrice: 29, moq: 1, stock: 999, rating: 4.7, sponsored: false, tradeAssurance: true, imageUrl: categoryImages.Logistique, sellerId: 'public-seller-3' },
+    { id: 'fallback-laptop', name: 'Ordinateurs portables reconditionnes verifies', category: 'Informatique', city: 'Nairobi', origin: 'KE', price: 260, wholesalePrice: 230, moq: 3, stock: 80, rating: 4.5, sponsored: true, tradeAssurance: true, imageUrl: categoryImages.Informatique, sellerId: 'public-seller-4' },
+    { id: 'fallback-fashion', name: 'Sacs et accessoires mode pour boutiques', category: 'Apparel', city: 'Kampala', origin: 'TR', price: 18, wholesalePrice: 12, moq: 30, stock: 520, rating: 4.4, sponsored: false, tradeAssurance: true, imageUrl: categoryImages.Apparel, sellerId: 'public-seller-5' },
+    { id: 'fallback-solar', name: 'Kits solaires domestiques avec installation', category: 'Electronique', city: 'Gulu', origin: 'UG', price: 145, wholesalePrice: 128, moq: 2, stock: 95, rating: 4.9, sponsored: true, tradeAssurance: true, imageUrl: categoryImages.Electronique, sellerId: 'public-seller-6' },
+    { id: 'fallback-machinery', name: 'Machine emballage petite production', category: 'Machinery', city: 'Kampala', origin: 'CN', price: 890, wholesalePrice: 830, moq: 1, stock: 16, rating: 4.6, sponsored: false, tradeAssurance: true, imageUrl: categoryImages.Machinery, sellerId: 'public-seller-7' },
+    { id: 'fallback-car', name: 'Moto electrique livraison urbaine', category: 'Automotive', city: 'Jinja', origin: 'UG', price: 620, wholesalePrice: 575, moq: 2, stock: 25, rating: 4.5, sponsored: true, tradeAssurance: true, imageUrl: categoryImages.Automotive, sellerId: 'public-seller-8' },
+  ];
+
+  const searchText = query.trim().toLowerCase();
+  const publicProducts = (products?.length ? products : fallbackProducts)
+    .filter((product) => {
+      const haystack = `${product.name} ${product.category} ${product.city} ${product.origin}`.toLowerCase();
+      return !searchText || haystack.includes(searchText);
+    });
+  const visibleProducts = publicProducts.length ? publicProducts : fallbackProducts;
+  const suppliers = users.filter((user) => ['VENDEUR', 'FOURNISSEUR'].includes(user.role)).slice(0, 5);
+  const categoryStats = categoryDepartments.map((department, index) => {
+    const count = visibleProducts.filter((product) => normalizeCategory(product.category) === department.category).length;
+    return { ...department, count: count || (index + 2) * 137 };
+  });
+  const featuredProducts = visibleProducts.filter((product) => product.sponsored || product.tradeAssurance).slice(0, 5);
+  const flashProducts = (featuredProducts.length ? featuredProducts : visibleProducts).slice(0, 5);
+  const activeCategoryProducts = visibleProducts.filter((product) => normalizeCategory(product.category) === activeCategory).slice(0, 6);
+  const cartTotal = cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+
+  function goTo(path) {
+    window.location.href = path;
+  }
+
+  function togglePanel(panel) {
+    setOpenPanel((current) => current === panel ? '' : panel);
+  }
+
+  function addPublicProduct(product) {
+    setCart((previous) => {
+      const price = Number(product.promoPrice || product.wholesalePrice || product.price || 0);
+      const existing = previous.find((item) => item.productId === product.id);
+      if (existing) {
+        return previous.map((item) => item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [{ productId: product.id, name: product.name, quantity: 1, price, sellerId: product.sellerId || 'public-seller' }, ...previous];
+    });
+    setOpenPanel('cart');
+  }
+
+  function updatePublicCart(productId, delta) {
+    setCart((previous) => previous
+      .map((item) => item.productId === productId ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item)
+      .filter((item) => item.quantity > 0));
+  }
+
+  function submitPublicForm(event, key, label) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const saved = JSON.parse(window.localStorage.getItem(key) || '[]');
+    window.localStorage.setItem(key, JSON.stringify([{ ...payload, id: uid('public'), createdAt: new Date().toISOString() }, ...saved]));
+    setToast(`${label} enregistree. Connectez-vous pour la suivre dans votre espace.`);
+    form.reset();
+    setRfqOpen(false);
+    setClassifiedOpen(false);
+    setLensOpen(false);
+  }
+
+  const panelClass = 'absolute right-0 top-full z-50 mt-3 w-[min(92vw,520px)] rounded-lg border border-slate-200 bg-white p-5 text-slate-950 shadow-2xl shadow-slate-950/20';
+  const navLinks = [
+    ['categories', 'Toutes les categories'],
+    ['verified', 'Fabricants Verified'],
+    ['assurance', 'Trade Assurance'],
+    ['work', 'Nexora Work'],
+    ['tax', 'Exoneration de taxes'],
+    ['buyer', 'Centre acheteur'],
+    ['app', 'App & Extension'],
+    ['supplier', 'Devenir fournisseur'],
+  ];
+  const paymentBadges = ['ID Check', 'PCI DSS', 'SSL', 'Verified', 'Visa', 'Mastercard', 'Mobile Money', 'PayPal', 'Apple Pay', 'Google Pay'];
+  const quickActions = [
+    ['Demander un devis', ReceiptText, () => setRfqOpen(true)],
+    ['Top du classement', BarChart3, () => document.getElementById('recommended-products')?.scrollIntoView({ behavior: 'smooth' })],
+    ['Customization rapide', Zap, () => setRfqOpen(true)],
+    ['Publier une annonce', Store, () => setClassifiedOpen(true)],
+  ];
+
+  return (
+    <main className="min-h-screen bg-[#f5f5f5] text-slate-950">
+      {toast && (
+        <div className="fixed left-1/2 top-4 z-[120] w-[min(92vw,560px)] -translate-x-1/2 rounded-lg border border-cyan-200 bg-white px-4 py-3 text-sm font-black text-slate-900 shadow-xl shadow-slate-950/15">
+          <div className="flex items-center justify-between gap-3">
+            <span>{toast}</span>
+            <button onClick={() => setToast('')} className="rounded-full p-1 hover:bg-slate-100" aria-label="Fermer"><X className="h-4 w-4" /></button>
           </div>
-          
-          <div className="h-64 overflow-y-auto p-4 space-y-3">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] px-3 py-2 rounded-xl ${msg.from === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
-                  {msg.text}
+        </div>
+      )}
+
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-[1800px] items-center gap-4 px-4 py-4 lg:px-8">
+          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="nexora-logo-plate shrink-0" aria-label="Accueil Nexora">
+            <img src="/images/nexora-logo-full.png" alt="Nexora" className="h-8 w-auto sm:h-9" />
+          </button>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              document.getElementById('recommended-products')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="hidden min-w-0 flex-1 items-center rounded-full border-2 border-orange-500 bg-white pl-2 shadow-sm lg:flex"
+          >
+            <select value={searchType} onChange={(event) => setSearchType(event.target.value)} className="h-12 rounded-full bg-transparent px-4 text-sm font-bold outline-none">
+              <option>Produits</option>
+              <option>Fournisseurs</option>
+              <option>Fabricants</option>
+              <option>Annonces</option>
+            </select>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher produits, fournisseurs ou services" className="h-12 min-w-0 flex-1 border-l border-slate-200 px-4 text-lg font-semibold outline-none placeholder:text-slate-400" />
+            <button type="button" onClick={() => setLensOpen(true)} className="mr-2 rounded-full p-2 hover:bg-slate-100" aria-label="Recherche image"><ImageIcon className="h-6 w-6" /></button>
+            <button className="mr-1 inline-flex h-11 items-center gap-2 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 px-8 text-base font-black text-white shadow-lg shadow-orange-500/20"><Search className="h-5 w-5" /> Rechercher</button>
+          </form>
+
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+            <div className="relative hidden xl:block">
+              <button onClick={() => togglePanel('region')} className="flex h-12 items-center gap-2 rounded-lg px-3 text-left text-sm font-bold hover:bg-slate-100">
+                <MapPin className="h-5 w-5" />
+                <span className="leading-tight"><span className="block text-xs font-semibold text-slate-500">Adresse de livraison</span>{region}</span>
+              </button>
+              {openPanel === 'region' && (
+                <div className={panelClass}>
+                  <h3 className="text-xl font-black">Votre pays/region</h3>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">Les options d'expedition et les frais varient selon votre emplacement.</p>
+                  <button onClick={() => goTo('/login')} className="mt-5 h-12 w-full rounded-full bg-orange-600 text-sm font-black text-white">Connectez-vous pour ajouter une adresse</button>
+                  <div className="my-5 flex items-center gap-3 text-sm font-bold text-slate-500"><span className="h-px flex-1 bg-slate-200" />Ou<span className="h-px flex-1 bg-slate-200" /></div>
+                  <select value={region} onChange={(event) => setRegion(event.target.value)} className="h-12 w-full rounded-md border border-slate-300 px-3 font-bold outline-none">
+                    {['Uganda', 'RDC', 'Kenya', 'Rwanda', 'Tanzania', 'Saudi Arabia', 'France', 'Canada'].map((item) => <option key={item}>{item}</option>)}
+                  </select>
+                  <input className="mt-3 h-12 w-full rounded-md border border-slate-300 px-3 font-semibold outline-none" placeholder="Saisissez un code postal" />
+                  <input className="mt-3 h-12 w-full rounded-md border border-slate-300 px-3 font-semibold outline-none" placeholder="Adresse de livraison" />
+                  <button onClick={() => setOpenPanel('')} className="mt-4 h-12 w-full rounded-full bg-orange-600 text-sm font-black text-white">Sauvegarder</button>
                 </div>
-              </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button onClick={() => togglePanel('locale')} className="grid h-12 w-12 place-items-center rounded-full hover:bg-slate-100" aria-label="Langue et devise"><Landmark className="h-6 w-6" /></button>
+              {openPanel === 'locale' && (
+                <div className={panelClass}>
+                  <h3 className="text-xl font-black">Definir la langue et la devise</h3>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">Vous pouvez modifier ces parametres a tout moment.</p>
+                  <label className="mt-5 block text-sm font-bold">Langue</label>
+                  <select value={language} onChange={(event) => setLanguage(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-slate-300 px-3 font-bold outline-none">
+                    {['Francais', 'English', 'Swahili', 'Lingala', 'Arabic'].map((item) => <option key={item}>{item}</option>)}
+                  </select>
+                  <label className="mt-4 block text-sm font-bold">Devise</label>
+                  <select value={publicCurrency} onChange={(event) => setPublicCurrency(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-slate-300 px-3 font-bold outline-none">
+                    {['USD', 'UGX', 'CDF', 'KES', 'EUR', 'SAR'].map((item) => <option key={item}>{item}</option>)}
+                  </select>
+                  <button onClick={() => setOpenPanel('')} className="mt-5 h-12 w-full rounded-full bg-orange-600 text-sm font-black text-white">Sauvegarder</button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button onClick={() => togglePanel('cart')} className="relative grid h-12 w-12 place-items-center rounded-full hover:bg-slate-100" aria-label="Panier">
+                <ShoppingBag className="h-6 w-6" />
+                {cart.length > 0 && <span className="absolute right-1 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-orange-600 px-1 text-xs font-black text-white">{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
+              </button>
+              {openPanel === 'cart' && (
+                <div className={panelClass}>
+                  <h3 className="text-xl font-black">Panier</h3>
+                  {!cart.length ? (
+                    <div className="py-8 text-center">
+                      <ShoppingBag className="mx-auto h-16 w-16 text-orange-500" />
+                      <p className="mt-4 text-lg font-black">Votre panier est vide</p>
+                      <button onClick={() => document.getElementById('recommended-products')?.scrollIntoView({ behavior: 'smooth' })} className="mt-5 h-11 w-full rounded-full border border-slate-900 text-sm font-black">Parcourir les produits</button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {cart.map((item) => (
+                        <div key={item.productId} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 p-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black">{item.name}</p>
+                            <p className="text-sm font-semibold text-slate-600">{currency(item.price)} x {item.quantity}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => updatePublicCart(item.productId, -1)} className="grid h-8 w-8 place-items-center rounded-full border font-black">-</button>
+                            <button onClick={() => updatePublicCart(item.productId, 1)} className="grid h-8 w-8 place-items-center rounded-full border font-black">+</button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-lg font-black">
+                        <span>Total</span>
+                        <span>{currency(cartTotal)}</span>
+                      </div>
+                      <button onClick={() => goTo('/login')} className="h-12 w-full rounded-full bg-orange-600 text-sm font-black text-white">Acceder au panier</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button onClick={() => togglePanel('account')} className="grid h-12 w-12 place-items-center rounded-full hover:bg-slate-100" aria-label="Compte"><UserCircle className="h-7 w-7" /></button>
+              {openPanel === 'account' && (
+                <div className={panelClass}>
+                  <h3 className="text-xl font-black">Bienvenue sur Nexora</h3>
+                  <button onClick={() => goTo('/login')} className="mt-5 h-12 w-full rounded-full bg-orange-600 text-sm font-black text-white">Se connecter</button>
+                  <p className="my-4 text-center text-sm font-semibold text-slate-500">Ou continuez avec</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['Facebook', 'Google', 'LinkedIn'].map((item) => <button key={item} onClick={() => goTo('/login')} className="h-12 rounded-lg border border-slate-200 text-sm font-black">{item}</button>)}
+                  </div>
+                  <div className="mt-5 border-t border-slate-200 pt-4">
+                    {['Mon Nexora', 'Commandes', 'Messages', 'Mes devis', 'Favoris', 'Wallet', 'Centre vendeur'].map((item) => (
+                      <button key={item} onClick={() => goTo('/login')} className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-bold hover:bg-slate-50">
+                        {item}<ChevronRight className="h-4 w-4" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => goTo('/signup')} className="hidden h-12 rounded-full bg-orange-600 px-6 text-sm font-black text-white shadow-lg shadow-orange-500/20 sm:block">S'inscrire</button>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-100 px-4 pb-3 lg:hidden">
+          <form onSubmit={(event) => event.preventDefault()} className="mt-3 flex rounded-full border-2 border-orange-500 bg-white pl-3">
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher sur Nexora" className="h-11 min-w-0 flex-1 bg-transparent text-sm font-bold outline-none" />
+            <button className="grid h-11 w-12 place-items-center rounded-full bg-orange-600 text-white"><Search className="h-5 w-5" /></button>
+          </form>
+        </div>
+
+        <nav className="border-t border-slate-100 px-4 lg:px-8">
+          <div className="mx-auto flex max-w-[1800px] items-center gap-7 overflow-x-auto text-sm font-bold">
+            {navLinks.map(([key, label]) => (
+              <button key={key} onClick={() => key === 'categories' ? togglePanel('mega') : document.getElementById(key)?.scrollIntoView({ behavior: 'smooth' })} className="relative whitespace-nowrap py-4 hover:text-orange-600">
+                {key === 'categories' && <Menu className="mr-2 inline h-4 w-4" />}{label}
+              </button>
             ))}
           </div>
-          
-          <div className="p-3 border-t">
-            <div className="flex flex-wrap gap-2 mb-3">
-              {quickReplies.map((reply, i) => (
-                <button key={i} onClick={() => handleQuickReply(reply)} className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
-                  {reply}
+        </nav>
+
+        {openPanel === 'mega' && (
+          <div className="absolute left-4 right-4 top-full z-40 mx-auto max-w-[1800px] rounded-b-lg border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/20 lg:left-8 lg:right-8">
+            <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
+              <div className="max-h-[420px] overflow-y-auto border-r border-slate-100 pr-3">
+                {categoryStats.map((department) => {
+                  const Icon = department.icon;
+                  return (
+                    <button key={department.category} onClick={() => setActiveCategory(department.category)} className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left font-bold ${activeCategory === department.category ? 'bg-slate-100 text-orange-600' : 'hover:bg-slate-50'}`}>
+                      <span className="flex items-center gap-3"><Icon className="h-6 w-6" />{department.name}</span>
+                      <span className="text-xs text-slate-500">{department.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-2xl font-black">Categories pour vous</h3>
+                  <button onClick={() => setOpenPanel('')} className="rounded-full p-2 hover:bg-slate-100" aria-label="Fermer"><X className="h-5 w-5" /></button>
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                  {(activeCategoryProducts.length ? activeCategoryProducts : visibleProducts.slice(0, 6)).map((product) => (
+                    <button key={product.id} onClick={() => { setQuery(product.name); setOpenPanel(''); }} className="text-center">
+                      <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="mx-auto h-28 w-28 rounded-full bg-slate-100 object-cover" />
+                      <span className="mt-2 block text-sm font-bold">{product.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+
+      <section className="bg-white">
+        <div className="mx-auto max-w-[1800px] px-4 py-8 lg:px-8">
+          <div className="flex flex-col gap-5 border-b border-slate-100 pb-6 lg:flex-row lg:items-center lg:justify-between">
+            <h1 className="text-2xl font-black sm:text-3xl">Bienvenue sur Nexora</h1>
+            <div className="flex flex-wrap items-center gap-4">
+              {quickActions.map(([label, Icon, action]) => (
+                <button key={label} onClick={action} className="inline-flex items-center gap-2 text-base font-black hover:text-orange-600">
+                  <Icon className="h-7 w-7" />{label}
                 </button>
               ))}
             </div>
-            <Button onClick={openWhatsApp} className="w-full bg-green-500 hover:bg-green-600">
-              <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
-            </Button>
           </div>
-        </div>
-      )}
-    </>
-  );
-}
 
-// ============ NAVIGATION ============
-function Navigation({ locale, setLocale, currentPage, setCurrentPage }) {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { cartCount } = useCart();
-  const t = translations[locale];
+          <div className="mt-7 grid gap-4 lg:grid-cols-[450px_1fr_570px]">
+            <div className="max-h-[456px] overflow-y-auto rounded-lg bg-[#f7f7f7] p-4">
+              {categoryStats.slice(0, 8).map((department) => {
+                const Icon = department.icon;
+                return (
+                  <button key={department.category} onClick={() => setActiveCategory(department.category)} className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-lg font-black hover:bg-white">
+                    <span className="flex items-center gap-3"><Icon className="h-7 w-7" />{department.name}</span>
+                    <ChevronRight className="h-5 w-5 text-slate-400" />
+                  </button>
+                );
+              })}
+            </div>
 
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+            <div className="grid gap-4 sm:grid-cols-2">
+              {visibleProducts.slice(0, 2).map((product) => (
+                <article key={product.id} className="rounded-lg bg-[#f7f7f7] p-6">
+                  <p className="text-2xl font-black">Recherches...</p>
+                  <p className="mt-1 text-lg font-black">{normalizeCategory(product.category)}</p>
+                  <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="mt-5 h-72 w-full rounded-lg bg-white object-cover" />
+                </article>
+              ))}
+            </div>
 
-  const navItems = [
-    { id: 'home', label: t.nav.home },
-    { id: 'shop', label: locale === 'fr' ? 'Boutique' : 'Shop' },
-    { id: 'services', label: locale === 'fr' ? 'Services IT' : 'IT Services' },
-    { id: 'starlink', label: 'Starlink' },
-    { id: 'portfolio', label: 'Portfolio' },
-    { id: 'about', label: t.nav.about },
-    { id: 'contact', label: t.nav.contact },
-  ];
+            <div className="overflow-hidden rounded-lg bg-sky-200">
+              <div className="grid h-full min-h-[456px] grid-cols-[0.8fr_1fr]">
+                <div className="bg-sky-100 p-7 text-blue-950">
+                  <p className="text-3xl font-black leading-tight">Decouvrez de nouveaux fabricants</p>
+                  <div className="mt-8 grid grid-cols-3 gap-3 text-sm font-bold">
+                    <span><b className="block text-2xl">34k</b>Fournisseurs</span>
+                    <span><b className="block text-2xl">5000</b>Secteurs</span>
+                    <span><b className="block text-2xl">78</b>Services</span>
+                  </div>
+                  <button onClick={() => document.getElementById('verified')?.scrollIntoView({ behavior: 'smooth' })} className="mt-8 rounded-full bg-blue-950 px-6 py-3 text-sm font-black text-white">Aller decouvrir</button>
+                </div>
+                <div className="relative bg-gradient-to-br from-sky-200 to-blue-900 p-6 text-white">
+                  <img src={categoryImages.Machinery} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" />
+                  <div className="relative flex h-full flex-col justify-end">
+                    <p className="text-2xl font-black">Recherche d'usines</p>
+                    <p className="mt-2 text-sm font-bold">Meilleurs fournisseurs, echantillons et personnalisation rapide.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-  return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-white/95 backdrop-blur-xl shadow-lg' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          <button onClick={() => setCurrentPage('home')} className="flex items-center space-x-2 group">
-            <img src={SITE_CONFIG.logo} alt="NEXORA" className="h-10 w-10 object-contain" />
-            <span className={`font-bold text-xl tracking-tight hidden sm:block ${isScrolled ? 'text-gray-900' : 'text-white'}`}>NEXORA</span>
-          </button>
-
-          <div className="hidden lg:flex items-center space-x-1">
-            {navItems.map((item) => (
-              <button key={item.id} onClick={() => setCurrentPage(item.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  currentPage === item.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
-                  : isScrolled ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' : 'text-white/90 hover:text-white hover:bg-white/10'
-                }`}
-              >{item.label}</button>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {frequentSearches.slice(0, 10).map((term) => (
+              <button key={term} onClick={() => setQuery(term)} className="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold hover:bg-orange-100 hover:text-orange-700">{term}</button>
             ))}
           </div>
-
-          <div className="flex items-center space-x-3">
-            <button onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')} className={`px-3 py-1.5 text-sm font-medium rounded-full border transition-all ${isScrolled ? 'border-gray-200 hover:border-blue-300' : 'border-white/30 text-white hover:bg-white/10'}`}>
-              {locale === 'fr' ? 'EN' : 'FR'}
-            </button>
-            <button onClick={() => setCurrentPage('cart')} className="relative p-2 rounded-full hover:bg-gray-100/20 transition-colors">
-              <ShoppingCart className={`w-6 h-6 ${isScrolled ? 'text-gray-700' : 'text-white'}`} />
-              {cartCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">{cartCount}</span>}
-            </button>
-            <Button onClick={() => setCurrentPage('contact')} className="hidden sm:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30">
-              {locale === 'fr' ? 'Devis Gratuit' : 'Free Quote'}
-            </Button>
-            <button onClick={() => setCurrentPage('portal')} className={`hidden lg:block px-3 py-1.5 text-xs font-medium transition-colors ${isScrolled ? 'text-gray-500 hover:text-blue-600' : 'text-white/70 hover:text-white'}`}>Portail</button>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100/20 transition-colors">
-              {isMobileMenuOpen ? <X size={24} className={isScrolled ? 'text-gray-900' : 'text-white'} /> : <Menu size={24} className={isScrolled ? 'text-gray-900' : 'text-white'} />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-gray-200">
-          <div className="px-4 py-4 space-y-2">
-            {navItems.map((item) => (
-              <button key={item.id} onClick={() => { setCurrentPage(item.id); setIsMobileMenuOpen(false); }}
-                className={`w-full px-4 py-3 rounded-xl text-left font-medium transition-all ${currentPage === item.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-              >{item.label}</button>
-            ))}
-          </div>
-        </div>
-      )}
-    </nav>
-  );
-}
-
-// ============ CONTACT FORM ============
-function ContactForm({ locale, type = 'contact', service = '' }) {
-  const t = translations[locale];
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', company: '', country: 'RDC', city: '', message: '', pack: '', service: service });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...formData, type }) });
-      if (response.ok) { setSubmitStatus('success'); setFormData({ name: '', phone: '', email: '', company: '', country: 'RDC', city: '', message: '', pack: '', service: '' }); }
-      else setSubmitStatus('error');
-    } catch (error) { setSubmitStatus('error'); }
-    setIsSubmitting(false);
-    setTimeout(() => setSubmitStatus(null), 5000);
-  };
-
-  const redirectToWhatsApp = () => {
-    const msg = `Bonjour NEXORA,\n\nNom: ${formData.name}\nTél: ${formData.phone}\nEmail: ${formData.email}\nEntreprise: ${formData.company || 'N/A'}\nPays: ${formData.country}\n\nMessage:\n${formData.message}`;
-    window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Input placeholder={t.contact.name + ' *'} value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required className="bg-white/80 border-gray-200 focus:border-blue-500 h-12" />
-        <Input placeholder={t.contact.phone + ' *'} value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} required className="bg-white/80 border-gray-200 focus:border-blue-500 h-12" />
-      </div>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Input type="email" placeholder={t.contact.email} value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="bg-white/80 border-gray-200 focus:border-blue-500 h-12" />
-        <Input placeholder={t.contact.company} value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} className="bg-white/80 border-gray-200 focus:border-blue-500 h-12" />
-      </div>
-      <Select value={formData.country} onValueChange={(v) => setFormData({...formData, country: v})}>
-        <SelectTrigger className="bg-white/80 border-gray-200 h-12"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="RDC">RD Congo</SelectItem>
-          <SelectItem value="Congo">Congo</SelectItem>
-          <SelectItem value="Rwanda">Rwanda</SelectItem>
-          <SelectItem value="Uganda">Uganda</SelectItem>
-          <SelectItem value="Kenya">Kenya</SelectItem>
-          <SelectItem value="Other">Autre</SelectItem>
-        </SelectContent>
-      </Select>
-      {type === 'quote' && (
-        <Select value={formData.service} onValueChange={(v) => setFormData({...formData, service: v})}>
-          <SelectTrigger className="bg-white/80 border-gray-200 h-12"><SelectValue placeholder={locale === 'fr' ? 'Type de service' : 'Service type'} /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="website">Site Web</SelectItem>
-            <SelectItem value="mobile">Application Mobile</SelectItem>
-            <SelectItem value="software">Logiciel de Gestion</SelectItem>
-            <SelectItem value="network">Réseaux / Wi-Fi</SelectItem>
-            <SelectItem value="starlink">Starlink</SelectItem>
-            <SelectItem value="maintenance">Maintenance</SelectItem>
-          </SelectContent>
-        </Select>
-      )}
-      <Textarea placeholder={t.form.details} value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} className="bg-white/80 border-gray-200 focus:border-blue-500 min-h-[120px]" />
-      <div className="flex gap-3">
-        <Button type="submit" disabled={isSubmitting} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 shadow-lg shadow-blue-500/30">
-          {isSubmitting ? '...' : (locale === 'fr' ? 'Envoyer' : 'Send')}
-        </Button>
-        <Button type="button" onClick={redirectToWhatsApp} className="bg-green-500 hover:bg-green-600 text-white h-12">
-          <MessageCircle className="w-5 h-5" />
-        </Button>
-      </div>
-      {submitStatus === 'success' && <div className="p-4 bg-green-100 text-green-700 rounded-xl text-center font-medium">{t.form.success}</div>}
-      {submitStatus === 'error' && <div className="p-4 bg-red-100 text-red-700 rounded-xl text-center font-medium">{t.form.error}</div>}
-    </form>
-  );
-}
-
-// ============ HOME PAGE ============
-function HomePage({ locale, setCurrentPage }) {
-  const t = translations[locale];
-  const [heroRef, heroVisible] = useScrollAnimation();
-  const [statsRef, statsVisible] = useScrollAnimation();
-  
-  const services = [
-    { icon: Satellite, title: t.services.starlink.title, desc: t.services.starlink.desc, color: 'from-blue-600 to-cyan-500', page: 'starlink' },
-    { icon: Globe, title: locale === 'fr' ? 'Sites Web' : 'Websites', desc: locale === 'fr' ? 'Sites vitrines, e-commerce, applications web' : 'Showcase sites, e-commerce, web apps', color: 'from-violet-600 to-purple-500', page: 'services' },
-    { icon: Smartphone, title: locale === 'fr' ? 'Apps Mobiles' : 'Mobile Apps', desc: locale === 'fr' ? 'Applications iOS et Android natives' : 'Native iOS and Android apps', color: 'from-pink-500 to-rose-500', page: 'services' },
-    { icon: Wifi, title: t.services.network.title, desc: t.services.network.desc, color: 'from-orange-500 to-amber-500', page: 'services' },
-    { icon: Monitor, title: locale === 'fr' ? 'Logiciels' : 'Software', desc: locale === 'fr' ? 'ERP, CRM, gestion de stock' : 'ERP, CRM, inventory management', color: 'from-emerald-500 to-teal-500', page: 'services' },
-    { icon: Wrench, title: locale === 'fr' ? 'Maintenance' : 'Maintenance', desc: locale === 'fr' ? 'Support technique 24/7' : '24/7 technical support', color: 'from-gray-600 to-gray-500', page: 'services' }
-  ];
-
-  const reasons = [
-    { icon: Award, title: t.why.corporate.title, desc: t.why.corporate.desc, gradient: 'from-blue-600 to-indigo-600' },
-    { icon: Zap, title: t.why.performance.title, desc: t.why.performance.desc, gradient: 'from-amber-500 to-orange-500' },
-    { icon: Shield, title: t.why.support.title, desc: t.why.support.desc, gradient: 'from-emerald-500 to-teal-500' }
-  ];
-  
-  return (
-    <>
-      {/* Hero */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900" />
-          <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-20">
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-futuristic-devices-99786-large.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-blue-600/30 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-cyan-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-        </div>
-
-        <div className={`relative z-10 max-w-7xl mx-auto px-4 text-center transition-all duration-1000 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 text-sm mb-8">
-            <Satellite className="w-4 h-4 mr-2 text-blue-400" />
-            {locale === 'fr' ? '🚀 Partenaire Starlink Officiel en RDC' : '🚀 Official Starlink Partner in DRC'}
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
-            {locale === 'fr' ? 'Infrastructure Réseau' : 'Network Infrastructure'}<br />
-            <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent animate-gradient">{locale === 'fr' ? '& Starlink en RDC' : '& Starlink in DRC'}</span>
-          </h1>
-
-          <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto mb-10 leading-relaxed">
-            {locale === 'fr' 
-              ? 'Installation Starlink certifiée, réseaux d\'entreprise, hotspots et solutions intelligentes — performance, sécurité et supervision 24/7.'
-              : 'Certified Starlink installation, enterprise networks, hotspots and smart solutions — performance, security and 24/7 monitoring.'}
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <Button onClick={() => setCurrentPage('starlink')} size="lg" className="bg-white text-slate-900 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-2xl group">
-              <Satellite className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Installer Starlink' : 'Install Starlink'}
-              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button onClick={() => setCurrentPage('contact')} size="lg" variant="outline" className="bg-transparent border-2 border-white/40 text-white hover:bg-white/10 hover:border-white px-8 py-6 text-lg font-semibold backdrop-blur-sm">
-              <Target className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Audit Réseau Gratuit' : 'Free Network Audit'}
-            </Button>
-          </div>
-
-          {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-6 text-white/60 text-sm">
-            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? '150+ Installations' : '150+ Installations'}</span>
-            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? 'Intervention < 48h' : 'Intervention < 48h'}</span>
-            <span className="flex items-center"><Check className="w-4 h-4 mr-1 text-green-400" /> {locale === 'fr' ? 'Supervision 24/7' : '24/7 Monitoring'}</span>
-          </div>
-        </div>
-
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <ChevronDown className="w-8 h-8 text-white/50" />
         </div>
       </section>
 
-      {/* Stats */}
-      <section ref={statsRef} className="py-16 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((stat, i) => (
-              <div key={i} className={`text-center transition-all duration-700 ${statsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`} style={{ transitionDelay: `${i * 100}ms` }}>
-                <div className="text-4xl sm:text-5xl font-bold text-blue-600 mb-2">
-                  <AnimatedCounter end={stat.value} suffix={stat.suffix} />
+      <section id="recommended-products" className="mx-auto max-w-[1800px] px-4 py-9 lg:px-8">
+        <div className="mb-5 flex items-center justify-center gap-4">
+          <span className="h-px w-24 bg-slate-300" />
+          <h2 className="text-xl font-black text-slate-500">Recommande pour votre entreprise</h2>
+          <span className="h-px w-24 bg-slate-300" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5">
+          {visibleProducts.slice(0, 15).map((product) => (
+            <article key={product.id} className="group rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-100 transition hover:shadow-xl">
+              <div className="relative">
+                <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="h-64 w-full rounded-lg bg-slate-100 object-cover" />
+                <button onClick={() => setLensOpen(true)} className="absolute bottom-3 left-3 grid h-10 w-10 place-items-center rounded-full bg-white shadow-lg" aria-label="Recherche image"><ImageIcon className="h-5 w-5" /></button>
+              </div>
+              <h3 className="mt-3 line-clamp-2 min-h-[48px] text-base font-bold leading-6">{product.name}</h3>
+              <p className="mt-2 text-2xl font-black">{currency(product.wholesalePrice || product.price)}</p>
+              <p className="text-sm font-semibold text-slate-600">MOQ: {product.moq || 1} pieces · {product.stock || 0} disponibles</p>
+              <p className="mt-1 text-sm font-bold text-blue-600"><BadgeCheck className="mr-1 inline h-4 w-4" />Verified · {product.origin || product.city}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button onClick={() => addPublicProduct(product)} className="h-10 rounded-full bg-orange-600 text-sm font-black text-white">Ajouter</button>
+                <button onClick={() => setRfqOpen(true)} className="h-10 rounded-full border border-slate-300 text-sm font-black">Devis</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="assurance" className="mx-auto max-w-[1800px] px-4 py-8 lg:px-8">
+        <div className="grid overflow-hidden rounded-lg bg-[#762f32] text-white lg:grid-cols-[0.85fr_1.3fr]">
+          <div className="bg-black/10 p-8">
+            <p className="text-3xl font-black"><span className="text-orange-400">Nexora</span> Guaranteed</p>
+            {['Commandes et paiements rapides', 'Livraison dans les delais', 'Garantie de remboursement'].map((item) => (
+              <p key={item} className="mt-4 text-xl font-black"><CheckCircle2 className="mr-2 inline h-5 w-5" />{item}</p>
+            ))}
+            <button onClick={() => document.getElementById('buyer')?.scrollIntoView({ behavior: 'smooth' })} className="mt-8 rounded-full bg-white px-6 py-3 text-sm font-black text-slate-950">Decouvrir maintenant</button>
+          </div>
+          <div className="grid gap-3 p-5 sm:grid-cols-4">
+            {flashProducts.slice(0, 4).map((product) => (
+              <article key={product.id} className="rounded-lg bg-white p-3 text-slate-950">
+                <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="h-36 w-full rounded-md object-cover" />
+                <p className="mt-2 text-xl font-black">{currency(product.price)}</p>
+                <p className="text-sm font-bold text-emerald-700">Livraison protegee</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1800px] px-4 py-8 lg:px-8">
+        <div className="overflow-hidden rounded-lg bg-white">
+          <div className="flex items-center justify-between bg-orange-600 px-5 py-4 text-white">
+            <h2 className="text-2xl font-black">Flash sales et top ventes</h2>
+            <p className="text-sm font-black">Fin dans 02:18:40</p>
+          </div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+            {flashProducts.map((product) => (
+              <article key={product.id} className="rounded-lg border border-slate-100 p-3">
+                <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="h-44 w-full rounded-lg object-cover" />
+                <h3 className="mt-3 line-clamp-2 min-h-[44px] font-bold">{product.name}</h3>
+                <p className="mt-2 text-xl font-black text-orange-700">{currency(product.price)}</p>
+                <p className="text-sm font-semibold text-slate-500">Top classement · Stock {product.stock || 0}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="verified" className="bg-white px-4 py-10 lg:px-8">
+        <div className="mx-auto grid max-w-[1800px] gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-blue-700">Fabricants Verified</p>
+            <h2 className="mt-2 text-4xl font-black">Votre acces a des fournisseurs agrees</h2>
+            <div className="mt-6 grid overflow-hidden rounded-lg text-white md:grid-cols-3">
+              {['Recherche d usines', 'Meilleurs fournisseurs', 'Echantillon d usine'].map((title, index) => (
+                <article key={title} className="relative min-h-[260px] p-6">
+                  <img src={[categoryImages.Machinery, categoryImages.Construction, categoryImages.Logistique][index]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-blue-950/90 to-blue-950/15" />
+                  <div className="relative flex h-full flex-col justify-end">
+                    <p className="text-2xl font-black">{title}</p>
+                    <button onClick={() => setRfqOpen(true)} className="mt-4 grid h-12 w-12 place-items-center rounded-full bg-white text-slate-950"><ArrowRight className="h-5 w-5" /></button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+          <aside className="rounded-lg bg-[#f3f3f3] p-6">
+            <h3 className="text-2xl font-black">Autres selections en vedette</h3>
+            {['Centre de dropshipping', 'Centre d echantillons', 'Personnalisation rapide', 'Salons', 'Vendeurs verifies', 'Partenariats'].map((item) => (
+              <button key={item} onClick={() => setRfqOpen(true)} className="block w-full rounded-md px-2 py-3 text-left text-lg font-semibold hover:bg-white">{item}</button>
+            ))}
+          </aside>
+        </div>
+      </section>
+
+      <section id="buyer" className="mx-auto max-w-[1800px] px-4 py-10 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="rounded-lg bg-white p-8">
+            <p className="text-xl font-black"><ShieldCheck className="mr-2 inline h-7 w-7 text-amber-500" />Trade Assurance</p>
+            <h2 className="mt-8 text-4xl font-black leading-tight">Profitez d'une protection du paiement a la livraison</h2>
+            <button onClick={() => setRfqOpen(true)} className="mt-8 rounded-full bg-orange-600 px-8 py-3 text-sm font-black text-white">En savoir plus</button>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {[
+              ['Paiements surs et faciles', ShieldCheck],
+              ['Politique de remboursement', Banknote],
+              ['Services expedition et logistique', Truck],
+              ['Protections apres-vente', PackageCheck],
+            ].map(([title, Icon]) => (
+              <button key={title} onClick={() => setOpenPanel('help')} className="flex items-center justify-between rounded-lg bg-white p-8 text-left text-xl font-black">
+                <span className="flex items-center gap-5"><span className="grid h-20 w-20 place-items-center rounded-full bg-amber-100"><Icon className="h-9 w-9" /></span>{title}</span>
+                <ArrowRight className="h-7 w-7" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="tax" className="bg-white px-4 py-12 lg:px-8">
+        <div className="mx-auto grid max-w-[1800px] gap-8 lg:grid-cols-[1fr_0.8fr]">
+          <div>
+            <h2 className="text-4xl font-black">Programme d'exoneration fiscale Nexora</h2>
+            <p className="mt-4 text-lg font-semibold">Faites une seule demande pour profiter d'exoneration et de remboursement de TVA.</p>
+            <div className="mt-7 grid gap-4 sm:grid-cols-3">
+              {['Inscription facile', 'Achats exoneres', 'Remboursement facile'].map((item) => (
+                <article key={item} className="rounded-lg bg-orange-50 p-5">
+                  <ReceiptText className="h-9 w-9 text-orange-700" />
+                  <p className="mt-4 text-xl font-black text-orange-700">{item}</p>
+                  <p className="mt-2 text-sm font-semibold">Documents, verification, taxes eligibles et suivi du remboursement.</p>
+                </article>
+              ))}
+            </div>
+          </div>
+          <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=80" alt="" className="h-full min-h-[330px] w-full rounded-lg object-cover" />
+        </div>
+      </section>
+
+      <section id="work" className="mx-auto grid max-w-[1800px] gap-8 px-4 py-12 lg:grid-cols-[1fr_0.8fr] lg:px-8">
+        <div className="rounded-lg bg-white p-8">
+          <p className="text-3xl font-black">Nexora Work</p>
+          <h2 className="mt-4 text-5xl font-black leading-tight">Votre equipe commerciale d'IA 7j/7, 24h/24</h2>
+          <p className="mt-5 text-xl font-semibold">De la conception au sourcing, laissez l'assistant Nexora preparer vos demandes et comparer les offres.</p>
+          <button onClick={() => dispatch(uiActions.setAssistantOpen(true))} className="mt-8 rounded-full bg-emerald-600 px-8 py-3 text-sm font-black text-white">Ouvrir l'assistant IA</button>
+        </div>
+        <div className="rounded-lg bg-emerald-100 p-8">
+          <div className="rounded-lg bg-white p-5 shadow-xl">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {['Sourcing agent', 'Qualite', 'Logistique'].map((item) => (
+                <div key={item} className="rounded-lg border border-slate-100 p-4 text-center">
+                  <UserCheck className="mx-auto h-8 w-8 text-emerald-600" />
+                  <p className="mt-2 text-sm font-black">{item}</p>
+                  <button onClick={() => dispatch(uiActions.setAssistantOpen(true))} className="mt-3 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Chat</button>
                 </div>
-                <p className="text-gray-600">{stat.label[locale]}</p>
+              ))}
+            </div>
+            <p className="mt-5 rounded-lg bg-emerald-600 p-4 text-sm font-bold text-white">Trouver des fournisseurs LED strips · MOQ 500pcs · prix cible 0.12 USD/pc</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="app" className="bg-white px-4 py-12 lg:px-8">
+        <div className="mx-auto grid max-w-[1800px] gap-8 lg:grid-cols-2">
+          <div className="border-r border-slate-200 pr-0 lg:pr-10">
+            <h2 className="text-3xl font-black">Telechargez l'application Nexora</h2>
+            <p className="mt-4 text-lg font-semibold">Trouvez des produits, communiquez avec fournisseurs, gerez et payez vos commandes depuis mobile.</p>
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <span className="rounded-lg bg-black px-5 py-3 text-sm font-black text-white">App Store</span>
+              <span className="rounded-lg bg-black px-5 py-3 text-sm font-black text-white">Google Play</span>
+              <span className="grid h-32 w-32 place-items-center rounded-lg border border-slate-300 text-center text-xs font-black">QR CODE</span>
+            </div>
+          </div>
+          <div>
+            <h2 className="text-3xl font-black">Decouvrez Nexora Lens</h2>
+            <p className="mt-4 text-lg font-semibold">Utilisez la recherche d'images pour trouver et comparer des produits similaires avec prix de gros.</p>
+            <button onClick={() => setLensOpen(true)} className="mt-6 rounded-full bg-orange-600 px-8 py-3 text-sm font-black text-white">Ajouter a l'extension</button>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1800px] px-4 py-10 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="rounded-lg bg-emerald-700 p-8 text-white">
+            <p className="text-sm font-black uppercase tracking-[0.2em]">Mode annonces locales</p>
+            <h2 className="mt-3 text-4xl font-black">Vendez comme sur une plateforme de petites annonces.</h2>
+            <p className="mt-4 text-lg font-semibold">Publier une annonce, choisir la region, negocier par message, booster la visibilite et suivre les demandes.</p>
+            <button onClick={() => setClassifiedOpen(true)} className="mt-7 rounded-full bg-white px-8 py-3 text-sm font-black text-emerald-800">Publier une annonce</button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {categoryStats.slice(0, 8).map((item) => (
+              <button key={item.category} onClick={() => { setActiveCategory(item.category); document.getElementById('recommended-products')?.scrollIntoView({ behavior: 'smooth' }); }} className="rounded-lg bg-white p-5 text-left shadow-sm ring-1 ring-slate-100 hover:shadow-lg">
+                <item.icon className="h-8 w-8 text-emerald-700" />
+                <p className="mt-4 text-lg font-black">{item.name}</p>
+                <p className="text-sm font-bold text-slate-500">{item.count} annonces</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-white px-4 py-12 lg:px-8">
+        <div className="mx-auto max-w-[1800px] border-t border-slate-200 pt-10">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+            {footerGroups.map(([title, links]) => (
+              <div key={title}>
+                <p className="text-lg font-black">{title}</p>
+                <div className="mt-4 space-y-3">
+                  {links.map((link) => <button key={link} onClick={() => setOpenPanel('help')} className="block text-left text-sm font-semibold text-slate-700 hover:text-orange-600">{link}</button>)}
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* 3 CORE PILLARS — Positionnement stratégique */}
-      <section className="py-24 bg-gradient-to-b from-white to-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">{locale === 'fr' ? 'NOS 3 SPÉCIALITÉS' : 'OUR 3 SPECIALTIES'}</Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              {locale === 'fr' ? 'L\'expertise NEXORA en 3 piliers' : 'NEXORA expertise in 3 pillars'}
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              {locale === 'fr'
-                ? 'Une mission claire : connecter, sécuriser et digitaliser les entreprises africaines.'
-                : 'A clear mission: connect, secure and digitalize African businesses.'}
-            </p>
+          <div className="mt-10 flex flex-wrap items-center gap-2">
+            {paymentBadges.map((item) => <span key={item} className="rounded-md border border-slate-200 px-3 py-2 text-xs font-black text-slate-700">{item}</span>)}
           </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {CORE_PILLARS.map((pillar, i) => {
-              const IconComponent = { Satellite, Wifi, Layers }[pillar.icon] || Satellite;
-              return (
-                <Card key={i} className="group relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 bg-white">
-                  <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${pillar.color}`} />
-                  <CardContent className="p-8">
-                    <Badge className={`mb-4 bg-gradient-to-r ${pillar.color} text-white border-0`}>{pillar.badge[locale]}</Badge>
-                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${pillar.color} flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform`}>
-                      <IconComponent className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{pillar.title[locale]}</h3>
-                    <p className="text-blue-600 font-medium mb-4 text-sm">{pillar.tagline[locale]}</p>
-                    <p className="text-gray-600 leading-relaxed mb-6">{pillar.description[locale]}</p>
-                    <ul className="space-y-2 mb-6">
-                      {pillar.bullets[locale].map((bullet, j) => (
-                        <li key={j} className="flex items-start text-sm text-gray-700">
-                          <Check className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                          {bullet}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button onClick={() => setCurrentPage(pillar.page)} className={`w-full bg-gradient-to-r ${pillar.color} hover:opacity-90 text-white shadow-md group/btn`}>
-                      {pillar.cta[locale]}
-                      <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* SERVICE PACKAGES — Conversion business */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{locale === 'fr' ? 'PACKS CLÉS-EN-MAIN' : 'TURNKEY PACKAGES'}</Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              {locale === 'fr' ? 'Choisissez votre Pack' : 'Choose your Pack'}
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              {locale === 'fr'
-                ? 'Des solutions complètes pensées pour votre activité. Installation, configuration et accompagnement inclus.'
-                : 'Complete solutions designed for your business. Installation, setup and support included.'}
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {SERVICE_PACKAGES.map((pkg, i) => {
-              const IconComponent = { Briefcase, Building, Shield }[pkg.icon] || Briefcase;
-              const isPopular = !!pkg.badge;
-              return (
-                <Card key={i} className={`relative overflow-hidden border-2 transition-all duration-500 hover:-translate-y-2 ${isPopular ? 'border-amber-400 shadow-2xl scale-105' : 'border-gray-100 shadow-lg hover:shadow-2xl'}`}>
-                  {isPopular && (
-                    <div className="absolute top-0 right-0 left-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2 text-xs font-bold tracking-wider">
-                      ⭐ {pkg.badge[locale]}
-                    </div>
-                  )}
-                  <CardContent className={`p-8 ${isPopular ? 'pt-14' : ''}`}>
-                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${pkg.color} flex items-center justify-center mb-6 shadow-lg`}>
-                      <IconComponent className="w-7 h-7 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-1">{pkg.name[locale]}</h3>
-                    <p className="text-sm text-gray-500 mb-4">{pkg.target[locale]}</p>
-                    <div className="mb-6 pb-6 border-b border-gray-100">
-                      <span className="text-3xl font-bold text-blue-600">{pkg.price[locale]}</span>
-                    </div>
-                    <ul className="space-y-3 mb-8">
-                      {pkg.features[locale].map((feature, j) => (
-                        <li key={j} className="flex items-start text-sm text-gray-700">
-                          <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${pkg.color} flex items-center justify-center mr-3 mt-0.5 flex-shrink-0`}>
-                            <Check className="w-3 h-3 text-white" />
-                          </div>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button onClick={() => setCurrentPage('contact')} className={`w-full ${isPopular ? `bg-gradient-to-r ${pkg.color} hover:opacity-90` : 'bg-gray-900 hover:bg-gray-800'} text-white shadow-md group/btn`}>
-                      {locale === 'fr' ? 'Demander ce Pack' : 'Request this Pack'}
-                      <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          <div className="text-center mt-12">
-            <p className="text-gray-600 mb-4">{locale === 'fr' ? 'Besoin d\'une solution sur mesure ?' : 'Need a custom solution?'}</p>
-            <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}`, '_blank')} variant="outline" className="border-2 border-green-500 text-green-600 hover:bg-green-50">
-              <MessageCircle className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Parler à un Expert' : 'Talk to an Expert'}
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* MAINTENANCE PLANS — Revenu récurrent */}
-      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-violet-100 text-violet-700 hover:bg-violet-100">{locale === 'fr' ? 'CONTRATS DE MAINTENANCE' : 'MAINTENANCE CONTRACTS'}</Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              {locale === 'fr' ? 'Restez connecté. Toujours.' : 'Stay connected. Always.'}
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              {locale === 'fr'
-                ? 'Au-delà de l\'installation, nous restons à vos côtés avec des contrats de maintenance et supervision adaptés.'
-                : 'Beyond installation, we stay by your side with adapted maintenance and supervision contracts.'}
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {MAINTENANCE_PLANS.map((plan, i) => (
-              <Card key={i} className={`relative overflow-hidden transition-all duration-500 hover:-translate-y-2 ${plan.popular ? 'border-2 border-blue-500 shadow-2xl' : 'border border-gray-200 shadow-lg hover:shadow-2xl'}`}>
-                {plan.popular && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold px-4 py-1 rounded-bl-xl">
-                    {locale === 'fr' ? 'RECOMMANDÉ' : 'RECOMMENDED'}
-                  </div>
-                )}
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name[locale]}</h3>
-                  <p className="text-sm text-gray-500 mb-6">{plan.description[locale]}</p>
-                  <div className="mb-6 pb-6 border-b border-gray-100">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-bold text-gray-900">{locale === 'fr' ? 'Sur devis' : 'Custom'}</span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">{plan.period[locale]}</p>
-                  </div>
-                  <ul className="space-y-3 mb-8">
-                    {plan.features[locale].map((feature, j) => (
-                      <li key={j} className="flex items-start text-sm text-gray-700">
-                        <Check className={`w-5 h-5 mr-2 mt-0.5 flex-shrink-0 ${plan.popular ? 'text-blue-600' : 'text-green-500'}`} />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button onClick={() => setCurrentPage('contact')} className={`w-full ${plan.popular ? `bg-gradient-to-r ${plan.color} hover:opacity-90` : 'bg-gray-900 hover:bg-gray-800'} text-white shadow-md`}>
-                    {locale === 'fr' ? 'Souscrire' : 'Subscribe'}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-16 grid md:grid-cols-4 gap-6 text-center">
-            <div className="p-6">
-              <Headphones className="w-10 h-10 mx-auto mb-3 text-blue-600" />
-              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Support Réactif' : 'Responsive Support'}</h4>
-              <p className="text-sm text-gray-600">{locale === 'fr' ? 'Réponse sous 1h en heures ouvrables' : '1h response during business hours'}</p>
+          <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="flex flex-wrap gap-3 text-sm font-semibold text-slate-600">
+              {['Nexora Express', 'Nexora Wholesale', 'Nexora Pay', 'Nexora Logistics', 'Nexora Cloud', 'Nexora Lens'].map((item) => <span key={item}>{item}</span>)}
             </div>
-            <div className="p-6">
-              <Server className="w-10 h-10 mx-auto mb-3 text-emerald-600" />
-              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Supervision NOC' : 'NOC Supervision'}</h4>
-              <p className="text-sm text-gray-600">{locale === 'fr' ? 'Surveillance proactive de votre réseau' : 'Proactive network monitoring'}</p>
-            </div>
-            <div className="p-6">
-              <Shield className="w-10 h-10 mx-auto mb-3 text-violet-600" />
-              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Sécurité Continue' : 'Continuous Security'}</h4>
-              <p className="text-sm text-gray-600">{locale === 'fr' ? 'Mises à jour & patchs automatiques' : 'Auto updates & patches'}</p>
-            </div>
-            <div className="p-6">
-              <Clock className="w-10 h-10 mx-auto mb-3 text-amber-600" />
-              <h4 className="font-bold text-gray-900 mb-1">{locale === 'fr' ? 'Disponibilité 99.9%' : '99.9% Uptime'}</h4>
-              <p className="text-sm text-gray-600">{locale === 'fr' ? 'SLA garantis pour pack Entreprise' : 'SLA guaranteed for Enterprise'}</p>
+            <div className="flex flex-wrap gap-2">
+              {['Facebook', 'LinkedIn', 'X', 'Instagram', 'YouTube', 'TikTok'].map((item) => <span key={item} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">{item}</span>)}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Process */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-emerald-100 text-emerald-700">{locale === 'fr' ? 'NOTRE PROCESSUS' : 'OUR PROCESS'}</Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{locale === 'fr' ? 'Comment ça Marche' : 'How it Works'}</h2>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            {PROCESS_STEPS.map((step, i) => {
-              const IconComponent = { MessageCircle, FileText, Code, Rocket }[step.icon] || MessageCircle;
-              return (
-                <div key={i} className="text-center relative">
-                  {i < PROCESS_STEPS.length - 1 && <div className="hidden md:block absolute top-10 left-1/2 w-full h-0.5 bg-gradient-to-r from-blue-500 to-blue-200" />}
-                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center mb-6 shadow-xl relative z-10">
-                    <IconComponent className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="text-sm font-bold text-blue-600 mb-2">ÉTAPE {step.step}</div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{step.title[locale]}</h3>
-                  <p className="text-gray-600">{step.description[locale]}</p>
-                </div>
-              );
-            })}
+          <div className="mt-6 flex flex-wrap gap-4 text-sm font-semibold text-slate-500">
+            {['Politiques et reglementations', 'Mentions legales', 'Regles de mise en vente', 'Droits de propriete intellectuelle', 'Politique de confidentialite', 'Conditions d utilisation', 'Respect de l integrite'].map((item) => <span key={item}>{item}</span>)}
           </div>
         </div>
-      </section>
+      </footer>
 
-      {/* Testimonials */}
-      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-white/10 text-white border-white/20">{locale === 'fr' ? 'TÉMOIGNAGES' : 'TESTIMONIALS'}</Badge>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">{locale === 'fr' ? 'Nos Clients Témoignent' : 'Client Testimonials'}</h2>
-          </div>
+      <div className="fixed right-4 top-1/2 z-30 hidden -translate-y-1/2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl lg:block">
+        <button onClick={() => dispatch(uiActions.setAssistantOpen(true))} className="grid h-16 w-16 place-items-center border-b border-slate-100 hover:bg-slate-50" aria-label="Assistant"><MessageCircle className="h-7 w-7" /></button>
+        <button onClick={() => setLensOpen(true)} className="grid h-16 w-16 place-items-center border-b border-slate-100 text-orange-600 hover:bg-slate-50" aria-label="Lens"><ImageIcon className="h-7 w-7" /></button>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="grid h-16 w-16 place-items-center hover:bg-slate-50" aria-label="Retour en haut"><ArrowRight className="h-7 w-7 -rotate-90" /></button>
+      </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {TESTIMONIALS.map((testimonial, i) => (
-              <Card key={i} className="bg-white/10 backdrop-blur border-white/20 text-white">
-                <CardContent className="p-6">
-                  <div className="flex mb-4">
-                    {[...Array(testimonial.rating)].map((_, j) => <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />)}
-                  </div>
-                  <Quote className="w-8 h-8 text-blue-400/50 mb-4" />
-                  <p className="text-white/90 text-sm mb-6 leading-relaxed">{testimonial.content}</p>
-                  <div className="flex items-center gap-3">
-                    <img src={testimonial.avatar} alt={testimonial.name} className="w-12 h-12 rounded-full object-cover" />
-                    <div>
-                      <p className="font-semibold text-white">{testimonial.name}</p>
-                      <p className="text-xs text-white/60">{testimonial.role}, {testimonial.company}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Technologies */}
-      <section className="py-16 bg-white border-y">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="text-center text-gray-500 mb-8 font-medium">{locale === 'fr' ? 'Technologies & Partenaires' : 'Technologies & Partners'}</p>
-          <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-            {PARTNERS.map((partner, i) => (
-              <div key={i} className="flex items-center gap-2 text-2xl hover:opacity-100 transition-opacity cursor-default">
-                <span>{partner.logo}</span>
-                <span className="text-sm font-medium text-gray-600">{partner.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Nexora */}
-      <section className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{t.why.title}</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {reasons.map((reason, index) => (
-              <div key={index} className="text-center p-8 rounded-3xl bg-white shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2">
-                <div className={`w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br ${reason.gradient} flex items-center justify-center mb-6 shadow-lg`}>
-                  <reason.icon className="w-10 h-10 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">{reason.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{reason.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 to-blue-700 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-        </div>
-        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <Badge className="mb-4 bg-white/10 text-white border-white/20 hover:bg-white/10">{locale === 'fr' ? '🎁 OFFRE LIMITÉE' : '🎁 LIMITED OFFER'}</Badge>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">{locale === 'fr' ? 'Audit Réseau Gratuit pour Votre Entreprise' : 'Free Network Audit for Your Business'}</h2>
-          <p className="text-xl text-blue-100 mb-10">{locale === 'fr' ? 'Diagnostic complet de votre infrastructure + recommandations personnalisées. Sans engagement.' : 'Complete diagnosis of your infrastructure + personalized recommendations. No obligation.'}</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button onClick={() => setCurrentPage('contact')} size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-6 text-lg font-semibold shadow-2xl group">
-              <Target className="mr-2 w-5 h-5" />
-              {locale === 'fr' ? 'Demander mon Audit Gratuit' : 'Request my Free Audit'}
-              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(locale === 'fr' ? 'Bonjour NEXORA, je souhaite parler à un expert.' : 'Hello NEXORA, I want to talk to an expert.')}`, '_blank')} size="lg" variant="outline" className="bg-transparent border-2 border-white/40 text-white hover:bg-white/10 hover:border-white px-8 py-6 text-lg font-semibold backdrop-blur-sm">
-              <MessageCircle className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Parler à un Expert' : 'Talk to an Expert'}
-            </Button>
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
-
-// ============ SERVICES IT PAGE ============
-function ServicesPage({ locale, setCurrentPage }) {
-  const [selectedService, setSelectedService] = useState(null);
-  
-  const iconMap = { Globe, Smartphone, Monitor, Wrench };
-
-  return (
-    <div className="pt-20 min-h-screen">
-      {/* Hero */}
-      <section className="py-24 bg-gradient-to-br from-violet-900 via-purple-900 to-slate-900 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 text-center">
-          <Badge className="mb-4 bg-white/10 text-white border-white/20">{locale === 'fr' ? 'DÉVELOPPEMENT & IT' : 'DEVELOPMENT & IT'}</Badge>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
-            {locale === 'fr' ? 'Services de Développement' : 'Development Services'}
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            {locale === 'fr' 
-              ? 'Sites web, applications mobiles, logiciels de gestion — Solutions sur mesure pour votre entreprise'
-              : 'Websites, mobile apps, management software — Custom solutions for your business'}
-          </p>
-        </div>
-      </section>
-
-      {/* Services Grid */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-8">
-            {IT_SERVICES.map((service, i) => {
-              const IconComponent = iconMap[service.icon] || Globe;
-              return (
-                <Card key={i} className="overflow-hidden hover:shadow-2xl transition-all group">
-                  <CardContent className="p-8">
-                    <div className="flex items-start gap-6">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                        <IconComponent className="w-8 h-8 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{service.title[locale]}</h3>
-                        <p className="text-gray-600 mb-4">{service.description[locale]}</p>
-                        <div className="flex items-center gap-2 mb-4">
-                          <span className="text-sm text-gray-500">{locale === 'fr' ? 'À partir de' : 'Starting from'}</span>
-                          <span className="text-2xl font-bold text-blue-600">${service.startingPrice}</span>
-                        </div>
-                        <ul className="grid grid-cols-2 gap-2 mb-6">
-                          {service.features[locale].map((feature, j) => (
-                            <li key={j} className="flex items-center text-sm text-gray-600">
-                              <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                        <Button onClick={() => setCurrentPage('contact')} className="w-full bg-blue-600 hover:bg-blue-700">
-                          {locale === 'fr' ? 'Demander un Devis' : 'Request Quote'}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Technologies */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-12">{locale === 'fr' ? 'Technologies Maîtrisées' : 'Technologies We Master'}</h2>
-          <div className="flex flex-wrap justify-center gap-4">
-            {TECHNOLOGIES.map((tech, i) => (
-              <div key={i} className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all">
-                <span className="text-xl">{tech.icon}</span>
-                <span className="font-medium text-gray-700">{tech.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 to-blue-700">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-6">{locale === 'fr' ? 'Un Projet en Tête ?' : 'Have a Project in Mind?'}</h2>
-          <p className="text-blue-100 mb-8">{locale === 'fr' ? 'Discutons de votre projet et trouvons la meilleure solution ensemble.' : 'Let\'s discuss your project and find the best solution together.'}</p>
-          <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(locale === 'fr' ? 'Bonjour, j\'ai un projet de développement à discuter.' : 'Hello, I have a development project to discuss.')}`, '_blank')} size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
-            <MessageCircle className="mr-2 w-5 h-5" /> {locale === 'fr' ? 'Discuter sur WhatsApp' : 'Chat on WhatsApp'}
-          </Button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-// ============ PORTFOLIO PAGE ============
-function PortfolioPage({ locale }) {
-  const [filter, setFilter] = useState('all');
-  const categories = ['all', 'Web', 'Mobile', 'Logiciel', 'Réseau', 'Starlink'];
-
-  const filteredItems = filter === 'all' ? PORTFOLIO_ITEMS : PORTFOLIO_ITEMS.filter(item => item.category === filter);
-
-  return (
-    <div className="pt-20 min-h-screen">
-      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <Badge className="mb-4 bg-white/10 text-white border-white/20">PORTFOLIO</Badge>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{locale === 'fr' ? 'Nos Réalisations' : 'Our Work'}</h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">{locale === 'fr' ? 'Découvrez quelques-uns de nos projets récents' : 'Discover some of our recent projects'}</p>
-        </div>
-      </section>
-
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Filters */}
-          <div className="flex flex-wrap justify-center gap-3 mb-12">
-            {categories.map((cat) => (
-              <Button key={cat} variant={filter === cat ? 'default' : 'outline'} onClick={() => setFilter(cat)} className="rounded-full">
-                {cat === 'all' ? (locale === 'fr' ? 'Tout' : 'All') : cat}
-              </Button>
-            ))}
-          </div>
-
-          {/* Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredItems.map((item) => (
-              <Card key={item.id} className="overflow-hidden group hover:shadow-2xl transition-all">
-                <div className="relative h-48 overflow-hidden">
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <Badge className="bg-blue-600">{item.category}</Badge>
-                  </div>
-                </div>
-                <CardContent className="p-6">
-                  <p className="text-sm text-blue-600 font-medium mb-1">{item.client} • {item.year}</p>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4">{item.description}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {item.technologies.map((tech, j) => (
-                      <span key={j} className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">{tech}</span>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-// ============ STARLINK PAGE ============
-function StarlinkPage({ locale }) {
-  const t = translations[locale];
-  const packs = [
-    { icon: HomeIcon, label: t.starlinkOffer.house, desc: locale === 'fr' ? 'Usage résidentiel' : 'Residential use', price: 650 },
-    { icon: Briefcase, label: t.starlinkOffer.business, desc: locale === 'fr' ? 'PME & Entreprises' : 'SMEs & Enterprises', price: 750 },
-    { icon: GraduationCap, label: t.starlinkOffer.school, desc: locale === 'fr' ? 'Établissements scolaires' : 'Schools', price: 700 },
-    { icon: Coffee, label: t.starlinkOffer.cyber, desc: locale === 'fr' ? 'Cybercafés & Hotspot' : 'Cybercafés & Hotspot', price: 800 }
-  ];
-  
-  return (
-    <div className="pt-20">
-      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-          <img src="https://images.unsplash.com/photo-1516849841032-87cbac4d88f7?w=1920" alt="Starlink" className="w-full h-full object-cover" />
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 text-center">
-          <Badge className="mb-4 bg-blue-500/20 text-blue-300 border-blue-500/30">🛰️ STARLINK EN RDC</Badge>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{t.starlinkOffer.title}</h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-12">{locale === 'fr' ? 'Internet satellite haute performance — Couverture nationale' : 'High-performance satellite internet — National coverage'}</p>
-          
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <Card className="bg-white/10 backdrop-blur border-white/20 text-center p-8">
-              <Satellite className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-              <p className="text-blue-400 font-medium mb-2">{t.starlinkOffer.kit}</p>
-              <p className="text-4xl font-bold text-white">$150</p>
-              <p className="text-gray-400 text-sm mt-2">{locale === 'fr' ? 'minimum à l\'obtention' : 'minimum upfront'}</p>
-            </Card>
-            <Card className="bg-white/10 backdrop-blur border-blue-500/50 text-center p-8 ring-2 ring-blue-500/30">
-              <Zap className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-              <p className="text-blue-400 font-medium mb-2">{t.starlinkOffer.monthly}</p>
-              <p className="text-4xl font-bold text-white">$100</p>
-              <p className="text-gray-400 text-sm mt-2">{locale === 'fr' ? '/ mois × 5 mois' : '/ month × 5 months'}</p>
-            </Card>
-            <Card className="bg-white/10 backdrop-blur border-white/20 text-center p-8">
-              <Star className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-              <p className="text-amber-400 font-medium mb-2">{t.starlinkOffer.subscription}</p>
-              <p className="text-2xl font-bold text-white">{locale === 'fr' ? 'Non inclus' : 'Not included'}</p>
-              <p className="text-gray-400 text-sm mt-2">{locale === 'fr' ? 'abonnement mensuel' : 'monthly subscription'}</p>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">{t.starlinkOffer.packs}</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {packs.map((pack, i) => (
-              <Card key={i} className="text-center p-8 hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer group" onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Je suis intéressé par le pack ${pack.label} Starlink`)}`, '_blank')}>
-                <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <pack.icon className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{pack.label}</h3>
-                <p className="text-gray-600 text-sm mb-4">{pack.desc}</p>
-                <Button variant="outline" className="w-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all">
-                  <MessageCircle className="w-4 h-4 mr-2" /> {locale === 'fr' ? 'Commander' : 'Order'}
-                </Button>
-              </Card>
-            ))}
-          </div>
-
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">{t.faq.title}</h2>
-            <div className="space-y-4">
-              {[{ q: t.faq.q1, a: t.faq.a1 }, { q: t.faq.q2, a: t.faq.a2 }, { q: t.faq.q3, a: t.faq.a3 }, { q: t.faq.q4, a: t.faq.a4 }].map((faq, i) => (
-                <div key={i} className="p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <h4 className="font-semibold text-gray-900 mb-2">{faq.q}</h4>
-                  <p className="text-gray-600">{faq.a}</p>
-                </div>
+      {openPanel === 'help' && (
+        <div className="fixed inset-0 z-[90] bg-slate-950/40 p-4" onClick={() => setOpenPanel('')}>
+          <div className="mx-auto mt-24 max-w-2xl rounded-lg bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-black">Centre d'assistance Nexora</h3>
+              <button onClick={() => setOpenPanel('')} className="rounded-full p-2 hover:bg-slate-100" aria-label="Fermer"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {['Discussion en direct', 'Verifier le statut de commande', 'Remboursements', 'Signaler un abus', 'Ouvrir un litige', 'Suivi de production'].map((item) => (
+                <button key={item} onClick={() => goTo('/login')} className="rounded-lg border border-slate-200 p-4 text-left font-black hover:border-orange-300 hover:bg-orange-50">{item}</button>
               ))}
             </div>
           </div>
         </div>
-      </section>
+      )}
 
-      <section className="py-24 bg-gray-50">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">{locale === 'fr' ? 'Demander mon kit Starlink' : 'Request my Starlink kit'}</h2>
-          </div>
-          <Card className="p-8 shadow-xl">
-            <ContactForm locale={locale} type="starlink" />
-          </Card>
-        </div>
-      </section>
-    </div>
-  );
-}
+      {(rfqOpen || classifiedOpen || lensOpen) && (
+        <div className="fixed inset-0 z-[95] overflow-y-auto bg-slate-950/55 p-4">
+          <div className="mx-auto my-10 max-w-2xl rounded-lg bg-white p-6 text-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-black">{rfqOpen ? 'Demander un devis' : classifiedOpen ? 'Publier une annonce' : 'Recherche image Nexora Lens'}</h3>
+              <button onClick={() => { setRfqOpen(false); setClassifiedOpen(false); setLensOpen(false); }} className="rounded-full p-2 hover:bg-slate-100" aria-label="Fermer"><X className="h-5 w-5" /></button>
+            </div>
 
-// ============ SHOP PAGE ============
-function ShopPage({ locale, setCurrentPage }) {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [ads, setAds] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const { addToCart } = useCart();
+            {rfqOpen && (
+              <form onSubmit={(event) => submitPublicForm(event, 'nexora_public_rfqs', 'Demande de devis')} className="mt-5 grid gap-4 sm:grid-cols-2">
+                <input name="title" required placeholder="Produit ou service recherche" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none sm:col-span-2" />
+                <select name="category" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none">{categoryDepartments.map((item) => <option key={item.category}>{item.name}</option>)}</select>
+                <input name="quantity" type="number" min="1" required placeholder="Quantite" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none" />
+                <input name="targetPrice" type="number" min="0" step="0.01" placeholder="Prix cible" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none" />
+                <input name="deliveryCity" placeholder="Ville de livraison" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none" />
+                <textarea name="details" required placeholder="Specifications, delai, certification, emballage ou personnalisation" className="min-h-32 rounded-md border border-slate-300 px-3 py-3 font-semibold outline-none sm:col-span-2" />
+                <button className="h-12 rounded-full bg-orange-600 text-sm font-black text-white sm:col-span-2">Envoyer la demande</button>
+              </form>
+            )}
 
-  useEffect(() => { fetchData(); }, []);
+            {classifiedOpen && (
+              <form onSubmit={(event) => submitPublicForm(event, 'nexora_public_ads', 'Annonce')} className="mt-5 grid gap-4 sm:grid-cols-2">
+                <input name="title" required placeholder="Titre de l'annonce" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none sm:col-span-2" />
+                <select name="category" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none">{categoryDepartments.map((item) => <option key={item.category}>{item.name}</option>)}</select>
+                <input name="price" type="number" min="0" step="0.01" placeholder="Prix" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none" />
+                <input name="city" placeholder="Ville ou region" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none" />
+                <input name="phone" placeholder="Telephone de contact" className="h-12 rounded-md border border-slate-300 px-3 font-semibold outline-none" />
+                <textarea name="description" required placeholder="Description de l'annonce" className="min-h-32 rounded-md border border-slate-300 px-3 py-3 font-semibold outline-none sm:col-span-2" />
+                <button className="h-12 rounded-full bg-emerald-700 text-sm font-black text-white sm:col-span-2">Publier l'annonce</button>
+              </form>
+            )}
 
-  const fetchData = async () => {
-    try {
-      const [productsRes, categoriesRes, adsRes] = await Promise.all([fetch('/api/products?active=true'), fetch('/api/categories'), fetch('/api/ads?active=true&position=shop')]);
-      const [productsData, categoriesData, adsData] = await Promise.all([productsRes.json(), categoriesRes.json(), adsRes.json()]);
-      if (productsData.success) setProducts(productsData.data);
-      if (categoriesData.success) setCategories(categoriesData.data);
-      if (adsData.success) setAds(adsData.data);
-    } catch (error) { console.error('Error:', error); }
-    setLoading(false);
-  };
-
-  const filteredProducts = products.filter(p => (selectedCategory === 'all' || p.categoryId === selectedCategory) && p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
-  return (
-    <div className="pt-20 min-h-screen bg-gray-50">
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-700">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <Badge className="mb-4 bg-white/20 text-white border-white/30">🛍️ BOUTIQUE</Badge>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">{locale === 'fr' ? 'Notre Boutique' : 'Our Shop'}</h1>
-          <p className="text-xl text-blue-100">{locale === 'fr' ? 'Téléphones, Starlink, Accessoires et plus' : 'Phones, Starlink, Accessories and more'}</p>
-        </div>
-      </section>
-
-      {ads.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid md:grid-cols-3 gap-4">
-            {ads.slice(0, 3).map((ad) => (
-              <div key={ad.id} onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Je suis intéressé par: ${ad.title}`)}`, '_blank')} className="relative overflow-hidden rounded-2xl cursor-pointer group">
-                <img src={ad.image} alt={ad.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                  <div><h3 className="text-white font-semibold">{ad.title}</h3><p className="text-white/80 text-sm">{ad.description}</p></div>
-                </div>
-              </div>
-            ))}
+            {lensOpen && (
+              <form onSubmit={(event) => submitPublicForm(event, 'nexora_public_lens', 'Recherche image')} className="mt-5 space-y-4">
+                <label className="grid min-h-52 cursor-pointer place-items-center rounded-lg border-2 border-dashed border-slate-300 p-6 text-center font-black hover:border-orange-400">
+                  <input type="file" name="image" accept="image/*" className="sr-only" />
+                  <span><ImageIcon className="mx-auto mb-3 h-10 w-10 text-orange-600" />Importer une image produit</span>
+                </label>
+                <textarea name="details" placeholder="Ajoutez les details que vous voulez comparer" className="min-h-28 w-full rounded-md border border-slate-300 px-3 py-3 font-semibold outline-none" />
+                <button className="h-12 w-full rounded-full bg-orange-600 text-sm font-black text-white">Lancer la recherche</button>
+              </form>
+            )}
           </div>
         </div>
       )}
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <Input placeholder={locale === 'fr' ? 'Rechercher...' : 'Search...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-12" />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant={selectedCategory === 'all' ? 'default' : 'outline'} onClick={() => setSelectedCategory('all')} className="rounded-full">{locale === 'fr' ? 'Tout' : 'All'}</Button>
-            {categories.map((cat) => <Button key={cat.id} variant={selectedCategory === cat.id ? 'default' : 'outline'} onClick={() => setSelectedCategory(cat.id)} className="rounded-full">{cat.name}</Button>)}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 pb-16">
-        {loading ? (
-          <div className="flex justify-center py-12"><div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full" /></div>
-        ) : filteredProducts.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <Card key={product.id} className="group overflow-hidden hover:shadow-xl transition-all">
-                <div className="relative h-48 overflow-hidden bg-gray-100">
-                  {product.images?.[0] ? <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full flex items-center justify-center"><Package className="w-16 h-16 text-gray-300" /></div>}
-                  {product.comparePrice > product.price && <Badge className="absolute top-2 left-2 bg-red-500">-{Math.round((1 - product.price / product.comparePrice) * 100)}%</Badge>}
-                  {product.featured && <Badge className="absolute top-2 right-2 bg-amber-500"><Star className="w-3 h-3" /></Badge>}
-                </div>
-                <CardContent className="p-4">
-                  <p className="text-xs text-blue-600 font-medium mb-1">{product.categoryName || product.brand}</p>
-                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xl font-bold text-gray-900">${product.price}</span>
-                    {product.comparePrice > product.price && <span className="text-sm text-gray-400 line-through">${product.comparePrice}</span>}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={() => addToCart(product)} className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={product.stock <= 0}>
-                      <ShoppingCart className="w-4 h-4 mr-2" />{product.stock <= 0 ? 'Rupture' : 'Ajouter'}
-                    </Button>
-                    <Button variant="outline" onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Bonjour, je suis intéressé par: ${product.name} ($${product.price})`)}`, '_blank')}>
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12"><Package className="w-16 h-16 text-gray-300 mx-auto mb-4" /><p className="text-gray-500 text-lg">{locale === 'fr' ? 'Aucun produit trouvé' : 'No products found'}</p></div>
-        )}
-      </div>
-    </div>
+    </main>
   );
 }
 
-// ============ CART PAGE ============
-function CartPage({ locale, setCurrentPage }) {
-  const { cart, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
-  const [customerForm, setCustomerForm] = useState({ name: '', phone: '', email: '', address: '' });
-  const [orderSuccess, setOrderSuccess] = useState(null);
+export default function Home() {
+  const dispatch = useDispatch();
+  const [state, setState] = useState(() => normalizeState(emptyPlatformState));
+  const [active, setActive] = useState('home');
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [cityFilter, setCityFilter] = useState('ALL');
+  const [cart, setCart] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authView, setAuthView] = useState('landing');
+  const [authToken, setAuthToken] = useState('');
+  const [marketMode, setMarketMode] = useState('products');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedSupplierId, setSelectedSupplierId] = useState('');
 
-  const handleCheckout = () => {
-    if (!customerForm.name || !customerForm.phone) { alert(locale === 'fr' ? 'Veuillez remplir votre nom et téléphone' : 'Please fill your name and phone'); return; }
-    const itemsText = cart.map(item => `- ${item.name} x${item.quantity} = $${item.price * item.quantity}`).join('\n');
-    const msg = `🛒 *Nouvelle Commande NEXORA*\n\n*Client:* ${customerForm.name}\n*Tél:* ${customerForm.phone}\n${customerForm.email ? `*Email:* ${customerForm.email}\n` : ''}${customerForm.address ? `*Adresse:* ${customerForm.address}\n` : ''}\n*Produits:*\n${itemsText}\n\n*TOTAL: $${cartTotal}*`;
-    window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
-    setOrderSuccess({ orderNumber: 'WA-' + Date.now() });
-    clearCart();
-  };
+  useEffect(() => {
+    async function boot() {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      const savedAuth = window.localStorage.getItem(AUTH_KEY);
+      try {
+        const response = await fetch('/api/platform/bootstrap');
+        const payload = await response.json();
+        const backendState = payload.success ? payload.data : emptyPlatformState;
+        const localState = saved ? JSON.parse(saved) : {};
+        const normalized = normalizeState({ ...backendState, ...localState });
+        setState(normalized);
+        if (savedAuth) {
+          const session = JSON.parse(savedAuth);
+          if (session?.userId && normalized.users.some((user) => user.id === session.userId)) {
+            setIsAuthenticated(true);
+            setAuthToken(session.token || '');
+            setAuthView('app');
+            dispatch(sessionActions.setSession({ userId: session.userId, token: session.token || '', role: normalized.users.find((user) => user.id === session.userId)?.role || 'UTILISATEUR' }));
+            setState((previous) => ({ ...previous, currentUserId: session.userId }));
+          }
+        }
+      } catch {
+        setState(normalizeState(emptyPlatformState));
+      }
+    }
+    boot();
+  }, []);
 
-  if (orderSuccess) {
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [state]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.localStorage.setItem(AUTH_KEY, JSON.stringify({ userId: state.currentUserId, token: authToken, loggedAt: new Date().toISOString() }));
+    }
+  }, [authToken, isAuthenticated, state.currentUserId]);
+
+  const currentUser = state.users.find((user) => user.id === state.currentUserId) || state.users[0] || anonymousUser;
+  const isNationalScope = ['SUPER_ADMIN', 'ADMIN_NATIONAL', 'FINANCE'].includes(currentUser.role);
+  const canSeeCity = (city) => isNationalScope || currentUser.city === city;
+  const scopedProducts = state.products.filter((product) => canSeeCity(product.city));
+  const scopedOrders = state.orders.filter((order) => canSeeCity(order.city));
+  const scopedUsers = state.users.filter((user) => canSeeCity(user.city));
+
+  const stats = useMemo(() => {
+    const escrow = state.transactions.filter((item) => item.status === 'ESCROW_HOLD').reduce((sum, item) => sum + item.amount, 0);
+    const revenue = state.transactions.filter((item) => item.status === 'RELEASED').reduce((sum, item) => sum + item.commission, 0);
+    const openOps = state.orders.filter((item) => item.status !== 'DELIVERED').length
+      + state.rides.filter((item) => item.status !== 'COMPLETED').length
+      + state.deliveries.filter((item) => item.status !== 'DELIVERED').length
+      + state.cloudRequests.filter((item) => item.status !== 'DELIVERED').length;
+
+    return {
+      users: state.users.length,
+      sellers: state.users.filter((item) => item.role === 'VENDEUR').length,
+      suppliers: state.users.filter((item) => item.role === 'FOURNISSEUR').length,
+      products: state.products.length,
+      escrow,
+      revenue,
+      openOps,
+      kycPending: state.kyc.filter((item) => item.status === 'PENDING').length,
+      messages: state.messages.filter((item) => item.status === 'OPEN').length,
+      rfqs: (state.rfqs || []).filter((item) => item.status === 'OPEN').length,
+      disputes: (state.disputes || []).filter((item) => item.status !== 'RESOLVED').length,
+    };
+  }, [state]);
+
+  const filteredProducts = state.products.filter((product) => {
+    const search = `${product.name} ${product.category} ${product.subcategory} ${product.city} ${product.origin}`.toLowerCase();
+    return product.status === 'APPROVED'
+      && canSeeCity(product.city)
+      && search.includes(query.toLowerCase())
+      && (categoryFilter === 'ALL' || normalizeCategory(product.category) === categoryFilter)
+      && (cityFilter === 'ALL' || product.city === cityFilter);
+  });
+
+  const scopedRfqs = (state.rfqs || []).filter((rfq) => canSeeCity(rfq.city));
+  const scopedQuotes = (state.quotes || []).filter((quote) => scopedRfqs.some((rfq) => rfq.id === quote.rfqId));
+  const scopedDisputes = (state.disputes || []).filter((dispute) => canSeeCity(dispute.city));
+  const supplierUsers = state.users.filter((user) => ['VENDEUR', 'FOURNISSEUR'].includes(user.role) && canSeeCity(user.city));
+  const featuredProducts = filteredProducts.filter((product) => product.sponsored || product.tradeAssurance).slice(0, 6);
+  const selectedProduct = state.products.find((product) => product.id === selectedProductId);
+  const selectedSupplier = state.users.find((user) => user.id === selectedSupplierId);
+
+  function patch(partial) {
+    setState((previous) => ({ ...previous, ...partial }));
+  }
+
+  function notify(text, type = 'SYSTEM') {
+    patch({
+      notifications: [{ id: uid('n'), type, text, read: false }, ...state.notifications],
+    });
+  }
+
+  function audit(action, entity, entityId, detail, city = currentUser.city) {
+    return {
+      id: uid('a'),
+      actorId: currentUser.id,
+      action,
+      entity,
+      entityId,
+      city,
+      detail,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  function startSession(userId, token = authToken) {
+    patch({ currentUserId: userId });
+    setAuthToken(token || '');
+    setIsAuthenticated(true);
+    setAuthView('app');
+    dispatch(sessionActions.setSession({ userId, token: token || '', role: state.users.find((user) => user.id === userId)?.role || 'UTILISATEUR' }));
+    window.localStorage.setItem(AUTH_KEY, JSON.stringify({ userId, token: token || '', loggedAt: new Date().toISOString() }));
+  }
+
+  async function loginUser(formData) {
+    const identifier = String(formData.get('identifier') || '').toLowerCase().trim();
+    const password = String(formData.get('password') || '');
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password }),
+    });
+    const payload = await response.json();
+    if (payload.success && payload.user) {
+      const exists = state.users.some((item) => item.id === payload.user.id);
+      patch({ users: exists ? state.users.map((item) => item.id === payload.user.id ? { ...item, ...payload.user } : item) : [payload.user, ...state.users] });
+      startSession(payload.user.id, payload.token);
+      return;
+    }
+    notify(payload.error || 'Identifiants incorrects.', 'AUTH');
+  }
+
+  async function signupUser(formData) {
+    const role = formData.get('role') || 'ACHETEUR';
+    const user = {
+      id: uid('u'),
+      name: formData.get('name'),
+      role,
+      phone: formData.get('phone'),
+      email: formData.get('email'),
+      city: formData.get('city'),
+      kycStatus: ['VENDEUR', 'FOURNISSEUR'].includes(role) ? 'PENDING' : 'VERIFIED',
+      walletBalance: 0,
+      status: ['VENDEUR', 'FOURNISSEUR'].includes(role) ? 'PENDING_VERIFICATION' : 'ACTIVE',
+      sellerStatus: ['VENDEUR', 'FOURNISSEUR'].includes(role) ? 'PENDING' : '',
+      supplierLevel: role === 'FOURNISSEUR' ? 'STANDARD' : '',
+      availableBalance: 0,
+      blockedBalance: 0,
+      avatarUrl: '',
+      companyName: formData.get('companyName') || '',
+      address: formData.get('address') || '',
+      active: true,
+    };
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...user, password: formData.get('password') }),
+    });
+    const payload = await response.json();
+    if (payload.success && payload.user) {
+      patch({ users: [payload.user, ...state.users] });
+      startSession(payload.user.id, payload.token);
+      return;
+    }
+    notify(payload.error || 'Inscription impossible.', 'AUTH');
+  }
+
+  function logoutUser() {
+    window.localStorage.removeItem(AUTH_KEY);
+    setAuthToken('');
+    setIsAuthenticated(false);
+    setAuthView('landing');
+    dispatch(sessionActions.clearSession());
+    setMobileOpen(false);
+  }
+
+  async function updateProfile(formData) {
+    const updated = {
+      name: formData.get('name'),
+      phone: formData.get('phone'),
+      email: formData.get('email'),
+      city: formData.get('city'),
+      companyName: formData.get('companyName'),
+      address: formData.get('address'),
+    };
+    if (authToken) {
+      try {
+        const response = await fetch('/api/me', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify(updated),
+        });
+        const payload = await response.json();
+        if (payload.success && payload.user) {
+          patch({ users: state.users.map((user) => user.id === currentUser.id ? { ...user, ...payload.user } : user) });
+          notify('Profil synchronise avec le backend.', 'PROFILE');
+          return;
+        }
+      } catch {
+        // Local storage fallback when MongoDB is not configured.
+      }
+    }
+    patch({
+      users: state.users.map((user) => user.id === currentUser.id ? { ...user, ...updated } : user),
+      auditLogs: [audit('UPDATE_PROFILE', 'users', currentUser.id, `Profil mis a jour : ${updated.name}`, updated.city), ...state.auditLogs],
+    });
+    notify('Profil mis a jour.', 'PROFILE');
+  }
+
+  function uploadAvatar(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let avatarUrl = String(reader.result || '');
+      if (authToken) {
+        try {
+          const response = await fetch('/api/uploads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+            body: JSON.stringify({
+              fileName: file.name,
+              mimeType: file.type,
+              size: file.size,
+              purpose: 'avatar',
+              fileBase64: avatarUrl,
+            }),
+          });
+          const payload = await response.json();
+          if (payload.success && payload.upload?.url) {
+            avatarUrl = payload.upload.url;
+          }
+        } catch {
+          // Local storage fallback when MongoDB is not configured.
+        }
+      }
+      patch({
+        users: state.users.map((user) => user.id === currentUser.id ? { ...user, avatarUrl } : user),
+      });
+      notify('Photo de profil ajoutee.', 'PROFILE');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function addUser(formData) {
+    const user = {
+      id: uid('u'),
+      name: formData.get('name'),
+      role: formData.get('role'),
+      phone: formData.get('phone'),
+      email: formData.get('email'),
+      city: formData.get('city'),
+      kycStatus: 'PENDING',
+      walletBalance: 0,
+      status: 'PENDING_VERIFICATION',
+      availableBalance: 0,
+      blockedBalance: 0,
+      active: true,
+    };
+    patch({
+      users: [user, ...state.users],
+      auditLogs: [audit('CREATE_USER', 'users', user.id, `Compte créé pour ${user.name}`, user.city), ...state.auditLogs],
+    });
+    notify(`${user.name} créé avec le rôle ${user.role}.`, 'USER');
+  }
+
+  function addProduct(formData) {
+    const product = {
+      id: uid('p'),
+      sellerId: currentUser.id,
+      shopId: formData.get('shopId') || state.shops.find((shop) => shop.sellerId === currentUser.id)?.id || '',
+      name: formData.get('name'),
+      sku: formData.get('sku') || `SKU-${Date.now()}`,
+      category: formData.get('category'),
+      subcategory: formData.get('subcategory') || '',
+      condition: formData.get('condition') || 'Neuf',
+      city: formData.get('city'),
+      pickupAddress: formData.get('pickupAddress') || '',
+      price: Number(formData.get('price')),
+      promoPrice: Number(formData.get('promoPrice') || 0),
+      stock: Number(formData.get('stock')),
+      sponsored: formData.get('sponsored') === 'on',
+      rating: 0,
+      status: 'PENDING_APPROVAL',
+      rejectionReason: '',
+      commissionRate: Number(formData.get('commissionRate') || 8),
+      moq: Number(formData.get('moq') || 1),
+      wholesalePrice: Number(formData.get('wholesalePrice') || formData.get('price')),
+      leadTime: formData.get('leadTime') || '48h',
+      b2bEnabled: formData.get('b2bEnabled') !== 'off',
+      origin: formData.get('origin') || 'RDC',
+      certifications: String(formData.get('certifications') || '').split(',').map((item) => item.trim()).filter(Boolean),
+      imageUrl: formData.get('imageUrl') || imageForCategory(formData.get('category')),
+      minOrderValue: Number(formData.get('minOrderValue') || formData.get('price')),
+      tradeAssurance: true,
+    };
+    patch({
+      products: [product, ...state.products],
+      auditLogs: [audit('SUBMIT_PRODUCT', 'products', product.id, `Produit soumis : ${product.name}`, product.city), ...state.auditLogs],
+    });
+    notify(`Produit publié : ${product.name}.`, 'MARKET');
+  }
+
+  function createShop(formData) {
+    const shop = {
+      id: uid('shop'),
+      sellerId: currentUser.id,
+      name: formData.get('name'),
+      slug: String(formData.get('name')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      description: formData.get('description'),
+      phone: formData.get('phone'),
+      address: formData.get('address'),
+      city: formData.get('city'),
+      openingHours: formData.get('openingHours') || '08:00 - 18:00',
+      rating: 0,
+      status: 'PENDING_APPROVAL',
+    };
+    patch({
+      shops: [shop, ...state.shops],
+      auditLogs: [audit('CREATE_SHOP', 'shops', shop.id, `Boutique créée : ${shop.name}`, shop.city), ...state.auditLogs],
+    });
+    notify(`Boutique soumise à validation : ${shop.name}.`, 'MARKET');
+  }
+
+  function moderateProduct(productId, status, reason = '') {
+    const product = state.products.find((item) => item.id === productId);
+    patch({
+      products: state.products.map((item) => item.id === productId ? { ...item, status, rejectionReason: reason } : item),
+      auditLogs: [audit(status === 'APPROVED' ? 'APPROVE_PRODUCT' : 'REJECT_PRODUCT', 'products', productId, `${status} : ${product?.name || productId}`, product?.city), ...state.auditLogs],
+    });
+    notify(`Produit ${status.toLowerCase()} : ${product?.name || productId}.`, 'MARKET');
+  }
+
+  function requestWithdrawal(formData) {
+    const withdrawal = {
+      id: uid('w'),
+      sellerId: currentUser.id,
+      amount: Number(formData.get('amount')),
+      method: formData.get('method'),
+      destination: formData.get('destination'),
+      status: 'PENDING',
+      requestedAt: new Date().toISOString(),
+    };
+    patch({
+      withdrawals: [withdrawal, ...state.withdrawals],
+      auditLogs: [audit('REQUEST_WITHDRAWAL', 'withdrawals', withdrawal.id, `Retrait demandé : ${currency(withdrawal.amount)}`, currentUser.city), ...state.auditLogs],
+    });
+    notify(`Demande de retrait envoyée : ${currency(withdrawal.amount)}.`, 'FINANCE');
+  }
+
+  function moderateWithdrawal(withdrawalId, status) {
+    const withdrawal = state.withdrawals.find((item) => item.id === withdrawalId);
+    patch({
+      withdrawals: state.withdrawals.map((item) => item.id === withdrawalId ? { ...item, status } : item),
+      auditLogs: [audit(status === 'PAID' ? 'PAY_WITHDRAWAL' : 'REJECT_WITHDRAWAL', 'withdrawals', withdrawalId, `${status} : ${currency(withdrawal?.amount)}`, currentUser.city), ...state.auditLogs],
+    });
+    notify(`Retrait ${status.toLowerCase()} : ${currency(withdrawal?.amount)}.`, 'FINANCE');
+  }
+
+  function addToCart(product) {
+    setCart((previous) => {
+      const existing = previous.find((item) => item.productId === product.id);
+      if (existing) {
+        return previous.map((item) => item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [{ productId: product.id, name: product.name, quantity: 1, price: product.price, sellerId: product.sellerId }, ...previous];
+    });
+  }
+
+  function createOrder() {
+    if (!cart.length) return;
+    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const orderNumber = `NX${new Date().getFullYear().toString().slice(2)}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(state.orders.length + 1).padStart(4, '0')}`;
+    const order = {
+      id: uid('o'),
+      orderNumber,
+      customerId: currentUser.id,
+      sellerId: cart[0].sellerId,
+      city: currentUser.city,
+      items: cart,
+      total,
+      status: 'PAYMENT_PENDING',
+      escrowStatus: 'PAYMENT_PENDING',
+      paymentMethod: 'MOBILE_MONEY',
+      createdAt: new Date().toISOString(),
+    };
+    const transaction = {
+      id: uid('t'),
+      module: 'MARKET',
+      reference: orderNumber,
+      amount: total,
+      status: 'ESCROW_HOLD',
+      payerId: currentUser.id,
+      receiverId: cart[0].sellerId,
+      commission: total * 0.08,
+      createdAt: new Date().toISOString(),
+    };
+    patch({
+      orders: [{ ...order, status: 'CONFIRMED', escrowStatus: 'ESCROW_HOLD' }, ...state.orders],
+      transactions: [transaction, ...state.transactions],
+      products: state.products.map((product) => {
+        const item = cart.find((cartItem) => cartItem.productId === product.id);
+        return item ? { ...product, stock: Math.max(0, product.stock - item.quantity) } : product;
+      }),
+    });
+    setCart([]);
+    notify(`Commande ${orderNumber} créée et fonds bloqués en escrow.`, 'ESCROW');
+  }
+
+  function createMarketOrders() {
+    if (!cart.length) return;
+
+    const grouped = cart.reduce((acc, item) => {
+      acc[item.sellerId] = [...(acc[item.sellerId] || []), item];
+      return acc;
+    }, {});
+    const createdOrders = [];
+    const createdTransactions = [];
+    const createdAudits = [];
+
+    Object.entries(grouped).forEach(([sellerId, items], index) => {
+      const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const commission = items.reduce((sum, item) => {
+        const product = state.products.find((entry) => entry.id === item.productId);
+        const rate = Number(product?.commissionRate || 8);
+        return sum + (item.price * item.quantity * rate) / 100;
+      }, 0);
+      const orderNumber = `NX${new Date().getFullYear().toString().slice(2)}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(state.orders.length + index + 1).padStart(4, '0')}`;
+
+      createdOrders.push({
+        id: uid('o'),
+        orderNumber,
+        customerId: currentUser.id,
+        sellerId,
+        city: currentUser.city,
+        items,
+        total,
+        status: 'CONFIRMED',
+        escrowStatus: 'ESCROW_HOLD',
+        paymentMethod: 'MANUAL_FINANCE',
+        deliveryStatus: 'PENDING',
+        commission,
+        createdAt: new Date().toISOString(),
+      });
+
+      createdTransactions.push({
+        id: uid('t'),
+        module: 'MARKET',
+        reference: orderNumber,
+        amount: total,
+        status: 'ESCROW_HOLD',
+        payerId: currentUser.id,
+        receiverId: sellerId,
+        commission,
+        createdAt: new Date().toISOString(),
+      });
+
+      createdAudits.push(audit('CREATE_ORDER_ESCROW', 'orders', orderNumber, `Commande ${orderNumber}, escrow ${currency(total)}`, currentUser.city));
+    });
+
+    patch({
+      orders: [...createdOrders, ...state.orders],
+      transactions: [...createdTransactions, ...state.transactions],
+      products: state.products.map((product) => {
+        const item = cart.find((cartItem) => cartItem.productId === product.id);
+        return item ? { ...product, stock: Math.max(0, product.stock - item.quantity) } : product;
+      }),
+      users: state.users.map((user) => {
+        const held = createdTransactions
+          .filter((transaction) => transaction.receiverId === user.id)
+          .reduce((sum, transaction) => sum + transaction.amount, 0);
+        return held ? { ...user, blockedBalance: Number(user.blockedBalance || 0) + held } : user;
+      }),
+      auditLogs: [...createdAudits, ...state.auditLogs],
+    });
+    setCart([]);
+    notify(`${createdOrders.length} commande(s) créée(s), paiement manuel validé et fonds bloqués en escrow.`, 'ESCROW');
+  }
+
+  function toggleFavorite(productId) {
+    const existing = (state.favorites || []).find((item) => item.userId === currentUser.id && item.productId === productId);
+    patch({
+      favorites: existing
+        ? state.favorites.filter((item) => item.id !== existing.id)
+        : [{ id: uid('fav'), userId: currentUser.id, productId, createdAt: new Date().toISOString() }, ...(state.favorites || [])],
+    });
+  }
+
+  function createRfq(formData) {
+    const rfq = {
+      id: uid('rfq'),
+      buyerId: currentUser.id,
+      title: formData.get('title'),
+      category: formData.get('category'),
+      city: formData.get('city'),
+      quantity: Number(formData.get('quantity')),
+      targetPrice: Number(formData.get('targetPrice') || 0),
+      deliveryDeadline: formData.get('deliveryDeadline') || 'A negocier',
+      notes: formData.get('notes') || '',
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+    };
+    patch({
+      rfqs: [rfq, ...(state.rfqs || [])],
+      auditLogs: [audit('CREATE_RFQ', 'rfqs', rfq.id, `Demande devis : ${rfq.title}`, rfq.city), ...state.auditLogs],
+    });
+    notify(`Demande de devis ouverte : ${rfq.title}.`, 'RFQ');
+  }
+
+  function createRfqFromProduct(product) {
+    const rfq = {
+      id: uid('rfq'),
+      buyerId: currentUser.id,
+      title: `Demande prix gros : ${product.name}`,
+      category: normalizeCategory(product.category),
+      city: product.city,
+      quantity: Math.max(10, Number(product.moq || 1)),
+      targetPrice: Number(product.wholesalePrice || product.price || 0),
+      deliveryDeadline: product.leadTime || 'A negocier',
+      notes: `RFQ creee depuis la fiche ${product.sku || product.id}.`,
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+    };
+    patch({
+      rfqs: [rfq, ...(state.rfqs || [])],
+      auditLogs: [audit('CREATE_RFQ_FROM_PRODUCT', 'rfqs', rfq.id, rfq.title, rfq.city), ...state.auditLogs],
+    });
+    setActive('rfq');
+    notify(`RFQ creee pour ${product.name}.`, 'RFQ');
+  }
+
+  function contactSupplierForProduct(product) {
+    const supplier = state.users.find((user) => user.id === product.sellerId);
+    const message = {
+      id: uid('m'),
+      channel: 'Acheteur - Fournisseur',
+      from: currentUser.name,
+      to: supplier?.name || product.sellerId,
+      text: `Bonjour, je veux negocier ${product.name} en quantite. MOQ ${product.moq || 1}, prix de gros ${currency(product.wholesalePrice || product.price)}.`,
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+    };
+    patch({ messages: [message, ...state.messages] });
+    setActive('messaging');
+    notify(`Message envoye a ${supplier?.name || 'fournisseur'}.`, 'MESSAGE');
+  }
+
+  function sendQuote(formData) {
+    const rfq = (state.rfqs || []).find((item) => item.id === formData.get('rfqId'));
+    const quote = {
+      id: uid('q'),
+      rfqId: formData.get('rfqId'),
+      supplierId: currentUser.id,
+      unitPrice: Number(formData.get('unitPrice')),
+      quantity: Number(formData.get('quantity')),
+      leadTime: formData.get('leadTime'),
+      paymentTerms: formData.get('paymentTerms') || 'Escrow Nexora',
+      status: 'SENT',
+      createdAt: new Date().toISOString(),
+    };
+    patch({
+      quotes: [quote, ...(state.quotes || [])],
+      auditLogs: [audit('SEND_QUOTE', 'quotes', quote.id, `Devis envoye pour ${rfq?.title || quote.rfqId}`, rfq?.city), ...state.auditLogs],
+    });
+    notify('Devis fournisseur envoye au client.', 'RFQ');
+  }
+
+  function acceptQuote(quote) {
+    const rfq = (state.rfqs || []).find((item) => item.id === quote.rfqId);
+    if (!rfq) return;
+    const total = Number(quote.unitPrice || 0) * Number(quote.quantity || 0);
+    const commission = total * 0.08;
+    const orderNumber = `NX${new Date().getFullYear().toString().slice(2)}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(state.orders.length + 1).padStart(4, '0')}`;
+    const order = {
+      id: uid('o'),
+      orderNumber,
+      customerId: rfq.buyerId,
+      sellerId: quote.supplierId,
+      city: rfq.city,
+      items: [{ productId: rfq.id, name: rfq.title, quantity: quote.quantity, price: quote.unitPrice }],
+      total,
+      status: 'CONFIRMED',
+      escrowStatus: 'ESCROW_HOLD',
+      paymentMethod: 'MANUAL_FINANCE',
+      deliveryStatus: 'PENDING',
+      commission,
+      createdAt: new Date().toISOString(),
+    };
+    const transaction = {
+      id: uid('t'),
+      module: 'RFQ_MARKET',
+      reference: orderNumber,
+      amount: total,
+      status: 'ESCROW_HOLD',
+      payerId: rfq.buyerId,
+      receiverId: quote.supplierId,
+      commission,
+      createdAt: new Date().toISOString(),
+    };
+    patch({
+      orders: [order, ...state.orders],
+      transactions: [transaction, ...state.transactions],
+      rfqs: state.rfqs.map((item) => item.id === rfq.id ? { ...item, status: 'AWARDED' } : item),
+      quotes: state.quotes.map((item) => item.id === quote.id ? { ...item, status: 'ACCEPTED' } : item),
+      users: state.users.map((user) => user.id === quote.supplierId ? { ...user, blockedBalance: Number(user.blockedBalance || 0) + total } : user),
+      auditLogs: [audit('ACCEPT_QUOTE_ESCROW', 'orders', orderNumber, `Devis accepte, escrow ${currency(total)}`, rfq.city), ...state.auditLogs],
+    });
+    notify(`Devis accepte : commande ${orderNumber} creee et fonds bloques.`, 'ESCROW');
+  }
+
+  function openDispute(formData) {
+    const dispute = {
+      id: uid('dispute'),
+      reference: formData.get('reference'),
+      openedById: currentUser.id,
+      assignedToId: 'u-1',
+      reason: formData.get('reason'),
+      status: 'OPEN',
+      resolution: '',
+      city: formData.get('city') || currentUser.city,
+      createdAt: new Date().toISOString(),
+    };
+    patch({
+      disputes: [dispute, ...(state.disputes || [])],
+      transactions: state.transactions.map((item) => item.reference === dispute.reference ? { ...item, status: 'DISPUTED' } : item),
+      auditLogs: [audit('OPEN_DISPUTE', 'disputes', dispute.id, `Litige ouvert : ${dispute.reference}`, dispute.city), ...state.auditLogs],
+    });
+    notify(`Litige ouvert pour ${dispute.reference}.`, 'DISPUTE');
+  }
+
+  function resolveDispute(disputeId, resolution) {
+    const dispute = (state.disputes || []).find((item) => item.id === disputeId);
+    patch({
+      disputes: state.disputes.map((item) => item.id === disputeId ? { ...item, status: 'RESOLVED', resolution } : item),
+      auditLogs: [audit('RESOLVE_DISPUTE', 'disputes', disputeId, resolution, dispute?.city), ...state.auditLogs],
+    });
+    notify(`Litige resolu : ${dispute?.reference || disputeId}.`, 'DISPUTE');
+  }
+
+  function createRide(formData) {
+    const city = formData.get('city');
+    const fare = Number(formData.get('fare'));
+    const driver = state.users.find((user) => user.role === 'CHAUFFEUR' && user.city === city) || state.users.find((user) => user.role === 'CHAUFFEUR');
+    const ride = {
+      id: uid('r'),
+      customerId: currentUser.id,
+      driverId: driver?.id || '',
+      city,
+      service: formData.get('service'),
+      pickup: formData.get('pickup'),
+      destination: formData.get('destination'),
+      fare,
+      status: driver ? 'DRIVER_ASSIGNED' : 'SEARCHING_DRIVER',
+      paymentStatus: 'ESCROW_HOLD',
+      rating: null,
+      createdAt: new Date().toISOString(),
+    };
+    const transaction = {
+      id: uid('t'),
+      module: 'CAB',
+      reference: ride.id,
+      amount: fare,
+      status: 'ESCROW_HOLD',
+      payerId: currentUser.id,
+      receiverId: driver?.id || '',
+      commission: fare * 0.15,
+      createdAt: new Date().toISOString(),
+    };
+    patch({ rides: [ride, ...state.rides], transactions: [transaction, ...state.transactions] });
+    notify(`Course ${ride.service} créée à ${city}.`, 'CAB');
+  }
+
+  function createDelivery(formData) {
+    const price = Number(formData.get('price'));
+    const delivery = {
+      id: uid('d'),
+      customerId: currentUser.id,
+      courierId: '',
+      city: formData.get('city'),
+      type: formData.get('type'),
+      pickup: formData.get('pickup'),
+      destination: formData.get('destination'),
+      proof: 'PENDING',
+      status: 'PICKUP_PENDING',
+      price,
+      createdAt: new Date().toISOString(),
+    };
+    const transaction = {
+      id: uid('t'),
+      module: 'LOGISTICS',
+      reference: delivery.id,
+      amount: price,
+      status: 'ESCROW_HOLD',
+      payerId: currentUser.id,
+      receiverId: '',
+      commission: price * 0.12,
+      createdAt: new Date().toISOString(),
+    };
+    patch({ deliveries: [delivery, ...state.deliveries], transactions: [transaction, ...state.transactions] });
+    notify(`Livraison créée : ${delivery.pickup} → ${delivery.destination}.`, 'LOGISTICS');
+  }
+
+  function createCloudRequest(formData) {
+    const request = {
+      id: uid('c'),
+      customerId: currentUser.id,
+      service: formData.get('service'),
+      priority: formData.get('priority'),
+      status: 'SCOPING',
+      city: formData.get('city'),
+      budget: Number(formData.get('budget')),
+      message: formData.get('message'),
+      createdAt: new Date().toISOString(),
+    };
+    patch({ cloudRequests: [request, ...state.cloudRequests] });
+    notify(`Demande cloud ouverte : ${request.service}.`, 'CLOUD');
+  }
+
+  function buySoftware(item) {
+    const transaction = {
+      id: uid('t'),
+      module: 'SOFTWARE',
+      reference: item.id,
+      amount: item.price,
+      status: 'RELEASED',
+      payerId: currentUser.id,
+      receiverId: item.developerId,
+      commission: item.price * 0.1,
+      createdAt: new Date().toISOString(),
+    };
+    patch({
+      software: state.software.map((software) => software.id === item.id ? { ...software, downloads: software.downloads + 1 } : software),
+      transactions: [transaction, ...state.transactions],
+    });
+    notify(`Licence achetée : ${item.name}.`, 'SOFTWARE');
+  }
+
+  function submitKyc(formData) {
+    const record = {
+      id: uid('k'),
+      userId: currentUser.id,
+      type: formData.get('type'),
+      documents: formData.get('type') === 'Entreprise'
+        ? ['RCCM', 'ID Nat', 'Numéro fiscal', 'Adresse']
+        : ['Carte d’identité', 'Photo selfie'],
+      status: 'PENDING',
+      city: formData.get('city'),
+      submittedAt: new Date().toISOString(),
+    };
+    patch({ kyc: [record, ...state.kyc] });
+    notify('Dossier KYC soumis pour validation.', 'KYC');
+  }
+
+  function sendMessage(formData) {
+    const message = {
+      id: uid('m'),
+      channel: formData.get('channel'),
+      from: currentUser.name,
+      to: formData.get('to'),
+      text: formData.get('text'),
+      status: 'OPEN',
+      createdAt: new Date().toISOString(),
+    };
+    patch({ messages: [message, ...state.messages] });
+    notify(`Nouveau message ${message.channel}.`, 'MESSAGE');
+  }
+
+  function updateCollection(collection, id, fields) {
+    patch({
+      [collection]: state[collection].map((item) => item.id === id ? { ...item, ...fields } : item),
+    });
+  }
+
+  function releaseTransaction(transaction) {
+    const sellerNetAmount = Math.max(0, Number(transaction.amount || 0) - Number(transaction.commission || 0));
+    patch({
+      transactions: state.transactions.map((item) => item.id === transaction.id ? { ...item, status: 'RELEASED' } : item),
+      orders: state.orders.map((item) => item.orderNumber === transaction.reference ? { ...item, escrowStatus: 'RELEASED', status: 'COMPLETED', deliveryStatus: 'DELIVERED' } : item),
+      rides: state.rides.map((item) => item.id === transaction.reference ? { ...item, paymentStatus: 'RELEASED', status: 'COMPLETED' } : item),
+      deliveries: state.deliveries.map((item) => item.id === transaction.reference ? { ...item, status: 'DELIVERED', proof: 'SIGNED_PHOTO' } : item),
+      users: state.users.map((user) => user.id === transaction.receiverId ? {
+        ...user,
+        availableBalance: Number(user.availableBalance || 0) + sellerNetAmount,
+        blockedBalance: Math.max(0, Number(user.blockedBalance || 0) - Number(transaction.amount || 0)),
+      } : user),
+      auditLogs: [audit('RELEASE_ESCROW', 'transactions', transaction.id, `Fonds libérés : ${transaction.reference}`, currentUser.city), ...state.auditLogs],
+    });
+    notify(`Fonds libérés pour ${transaction.reference}.`, 'ESCROW');
+  }
+
+  async function resetPlatformSession() {
+    const response = await fetch('/api/platform/bootstrap');
+    const payload = await response.json();
+    setState(normalizeState(payload.success ? payload.data : emptyPlatformState));
+    setCart([]);
+    setIsAuthenticated(false);
+    setAuthView('landing');
+    window.localStorage.removeItem(AUTH_KEY);
+  }
+
+  const nav = [
+    { id: 'home', label: 'Accueil', icon: HomeIcon },
+    { id: 'dashboard', label: 'Pilotage', icon: BarChart3 },
+    { id: 'market', label: 'Market', icon: ShoppingBag },
+    { id: 'suppliers', label: 'Fournisseurs', icon: Building2 },
+    { id: 'rfq', label: 'RFQ / Devis', icon: ReceiptText },
+    { id: 'cab', label: 'Cab', icon: Car },
+    { id: 'logistics', label: 'Logistics', icon: Truck },
+    { id: 'software', label: 'Software', icon: Code2 },
+    { id: 'cloud', label: 'Cloud', icon: Cloud },
+    { id: 'wallet', label: 'Wallet / Escrow', icon: Wallet },
+    { id: 'disputes', label: 'Litiges', icon: AlertTriangle },
+    { id: 'kyc', label: 'KYC', icon: FileCheck2 },
+    { id: 'messaging', label: 'Messages', icon: MessageCircle },
+    { id: 'profile', label: 'Profil', icon: UserCircle },
+    { id: 'admin', label: 'Administration', icon: ShieldCheck },
+  ];
+
+  if (!isAuthenticated) {
+    const publicProducts = state.products.filter((product) => product.status === 'APPROVED');
     return (
-      <div className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="max-w-md mx-4 p-8 text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"><Check className="w-10 h-10 text-green-600" /></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{locale === 'fr' ? 'Commande envoyée !' : 'Order sent!'}</h2>
-          <p className="text-gray-600 mb-6">{locale === 'fr' ? 'Nous vous contacterons bientôt.' : 'We will contact you soon.'}</p>
-          <Button onClick={() => setCurrentPage('shop')} className="w-full">{locale === 'fr' ? 'Continuer' : 'Continue'}</Button>
-        </Card>
-      </div>
+      <PublicMarketplace
+        query={query}
+        setQuery={setQuery}
+        products={publicProducts}
+        users={state.users}
+        cart={cart}
+        setCart={setCart}
+      />
     );
   }
 
-  return (
-    <div className="pt-20 min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">{locale === 'fr' ? 'Votre Panier' : 'Your Cart'}</h1>
-        {cart.length === 0 ? (
-          <Card className="p-12 text-center">
-            <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-6">{locale === 'fr' ? 'Votre panier est vide' : 'Your cart is empty'}</p>
-            <Button onClick={() => setCurrentPage('shop')}>{locale === 'fr' ? 'Visiter la boutique' : 'Visit shop'}</Button>
-          </Card>
-        ) : (
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
-              {cart.map((item) => (
-                <Card key={item.id} className="p-4">
-                  <div className="flex gap-4">
-                    <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {item.images?.[0] ? <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-gray-300 m-auto" />}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                      <p className="text-blue-600 font-bold">${item.price}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="w-4 h-4" /></Button>
-                        <span className="w-12 text-center font-medium">{item.quantity}</span>
-                        <Button size="sm" variant="outline" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="w-4 h-4" /></Button>
-                        <Button size="sm" variant="ghost" onClick={() => removeFromCart(item.id)} className="ml-auto text-red-500"><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </div>
-                    <p className="font-bold text-lg">${item.price * item.quantity}</p>
+  if (!isAuthenticated) {
+    if (authView === 'login' || authView === 'signup') {
+      const isSignup = authView === 'signup';
+      return (
+        <main className="min-h-screen bg-[#07111f] text-white">
+          <header className="border-b border-cyan-300/10 bg-[#07111f]/95">
+            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+              <button onClick={() => setAuthView('landing')} className="flex items-center gap-3" aria-label="Retour accueil Nexora">
+                <img src="/images/nexora-logo-full.png" alt="Nexora" className="h-11 w-auto" />
+              </button>
+              <Button variant="ghost" onClick={() => setAuthView('landing')}>Accueil</Button>
+            </div>
+          </header>
+
+          <section className="mx-auto grid min-h-[calc(100vh-64px)] max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+            <div className="hidden lg:block">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">Compte Nexora</p>
+              <h1 className="mt-4 text-4xl font-black tracking-tight">Un espace clair pour acheter, vendre et gerer vos operations.</h1>
+              <div className="mt-8 grid gap-3">
+                {[
+                  ['Acheteurs', 'Recherche, panier, commandes, favoris et demandes de prix.'],
+                  ['Vendeurs', 'Boutique, produits, prix, stock, commandes et paiements.'],
+                  ['Fournisseurs', 'Devis, negociations, documents, verification et suivi.'],
+                ].map(([title, text]) => (
+                  <div key={title} className="rounded-lg border border-cyan-200/10 bg-white/[0.06] p-4">
+                    <p className="font-black text-white">{title}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-300">{text}</p>
                   </div>
-                </Card>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-cyan-200/15 bg-[#0b1728] p-5 shadow-2xl shadow-blue-950/30 sm:p-7">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">{isSignup ? 'Inscription' : 'Connexion'}</p>
+                  <h2 className="mt-2 text-2xl font-black">{isSignup ? 'Creer votre compte' : 'Acceder a votre compte'}</h2>
+                </div>
+                <img src="/images/nexora-mark.png" alt="" className="h-14 w-14" />
+              </div>
+
+              <div className="mb-5 grid grid-cols-2 rounded-lg border border-cyan-200/10 bg-white/[0.05] p-1">
+                <button onClick={() => setAuthView('login')} className={`rounded-md px-3 py-2 text-sm font-black ${!isSignup ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-white shadow-lg shadow-blue-950/20' : 'text-slate-300'}`}>Connexion</button>
+                <button onClick={() => setAuthView('signup')} className={`rounded-md px-3 py-2 text-sm font-black ${isSignup ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-white shadow-lg shadow-blue-950/20' : 'text-slate-300'}`}>Inscription</button>
+              </div>
+
+              {!isSignup ? (
+                <form action={loginUser} className="space-y-4">
+                  <Field label="Email ou telephone"><Input name="identifier" required placeholder="Email ou telephone" /></Field>
+                  <Field label="Mot de passe"><Input name="password" type="password" required placeholder="Mot de passe" /></Field>
+                  <Button className="w-full"><LogIn className="h-4 w-4" /> Entrer</Button>
+                </form>
+              ) : (
+                <form action={signupUser} className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Nom"><Input name="name" required placeholder="Nom" /></Field>
+                  <Field label="Role"><Select name="role"><option>ACHETEUR</option><option>VENDEUR</option><option>FOURNISSEUR</option><option>LIVREUR</option></Select></Field>
+                  <Field label="Email"><Input name="email" type="email" required placeholder="Email" /></Field>
+                  <Field label="Telephone"><Input name="phone" required placeholder="Telephone" /></Field>
+                  <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <Field label="Entreprise"><Input name="companyName" placeholder="Optionnel" /></Field>
+                  <Field label="Adresse"><Input name="address" placeholder="Adresse" /></Field>
+                  <Field label="Mot de passe"><Input name="password" type="password" required placeholder="Mot de passe" /></Field>
+                  <Button className="sm:col-span-2"><UserPlus className="h-4 w-4" /> Creer le compte</Button>
+                </form>
+              )}
+            </div>
+          </section>
+        </main>
+      );
+    }
+
+    return (
+      <main className="min-h-screen bg-[#07111f] text-white">
+        <header className="sticky top-0 z-40 border-b border-cyan-300/10 bg-[#07111f]/90 backdrop-blur-xl">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <img src="/images/nexora-logo-full.png" alt="Nexora" className="h-11 w-auto" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => { window.location.href = '/login'; }}><LogIn className="h-4 w-4" /> Connexion</Button>
+              <Button onClick={() => { window.location.href = '/signup'; }}><UserPlus className="h-4 w-4" /> Inscription</Button>
+            </div>
+          </div>
+          <div className="hidden border-t border-cyan-300/10 px-4 py-2 sm:px-6 lg:block lg:px-8">
+            <div className="flex items-center gap-2 overflow-x-auto text-sm font-bold text-slate-300">
+              {topMarketplaceLinks.map((item) => (
+                <button key={item.label} onClick={() => { window.location.href = '/login'; }} className="whitespace-nowrap rounded-full px-3 py-1.5 hover:bg-white/10 hover:text-white">
+                  {item.label}
+                </button>
               ))}
             </div>
-            <Card className="p-6 h-fit sticky top-24">
-              <h3 className="text-lg font-semibold mb-4">{locale === 'fr' ? 'Finaliser' : 'Checkout'}</h3>
-              <div className="space-y-3 mb-6">
-                <Input placeholder={locale === 'fr' ? 'Votre nom *' : 'Your name *'} value={customerForm.name} onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})} />
-                <Input placeholder={locale === 'fr' ? 'Téléphone *' : 'Phone *'} value={customerForm.phone} onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})} />
-                <Input placeholder="Email" value={customerForm.email} onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})} />
-                <Input placeholder={locale === 'fr' ? 'Adresse' : 'Address'} value={customerForm.address} onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})} />
+          </div>
+        </header>
+
+        <section className="mx-auto grid min-h-[calc(100vh-64px)] max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
+          <div className="flex flex-col justify-center">
+            <div className="max-w-3xl">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">Nexora Marketplace</p>
+              <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">Achetez, vendez et livrez plus vite.</h1>
+              <p className="mt-5 max-w-2xl text-lg font-medium text-slate-300">
+                Une plateforme moderne pour trouver des produits, comparer les vendeurs, negocier les prix et suivre vos commandes en toute confiance.
+              </p>
+              <div className="mt-6 rounded-lg border border-cyan-200/20 bg-white/[0.08] p-2 shadow-2xl shadow-blue-950/30 backdrop-blur">
+                <div className="grid gap-2 md:grid-cols-[140px_1fr_auto]">
+                  <Select defaultValue="Produits">
+                    <option>Produits</option>
+                    <option>Fabricants</option>
+                    <option>Fournisseurs</option>
+                  </Select>
+                  <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Que recherchez-vous ?" />
+                  <Button onClick={() => { window.location.href = '/login'; }}><Search className="h-4 w-4" /> Rechercher</Button>
+                </div>
               </div>
-              <div className="border-t pt-4 mb-6"><div className="flex justify-between text-lg font-bold"><span>Total</span><span>${cartTotal}</span></div></div>
-              <Button onClick={handleCheckout} className="w-full bg-green-500 hover:bg-green-600 h-12 text-lg">
-                <MessageCircle className="w-5 h-5 mr-2" /> {locale === 'fr' ? 'Commander via WhatsApp' : 'Order via WhatsApp'}
-              </Button>
-            </Card>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ============ ABOUT PAGE ============
-function AboutPage({ locale }) {
-  const t = translations[locale];
-  return (
-    <div className="pt-20">
-      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <Badge className="mb-4 bg-white/10 text-white border-white/20">{locale === 'fr' ? 'À PROPOS' : 'ABOUT US'}</Badge>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{t.about.title}</h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">{t.about.subtitle}</p>
-        </div>
-      </section>
-
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {[{ title: t.about.vision, text: t.about.visionText, icon: Eye }, { title: t.about.mission, text: t.about.missionText, icon: Target }, { title: t.about.values, text: t.about.valuesText, icon: Award }].map((item, i) => (
-              <Card key={i} className="p-8 text-center hover:shadow-xl transition-all">
-                <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center mb-6"><item.icon className="w-8 h-8 text-white" /></div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{item.title}</h3>
-                <p className="text-gray-600">{item.text}</p>
-              </Card>
-            ))}
-          </div>
-
-          <div className="max-w-xl mx-auto text-center">
-            <Card className="p-8 bg-gradient-to-br from-gray-50 to-blue-50">
-              <img src={SITE_CONFIG.ceo.photo} alt={SITE_CONFIG.ceo.name} className="w-40 h-40 rounded-full mx-auto mb-6 object-cover border-4 border-blue-500 shadow-xl" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">{SITE_CONFIG.ceo.name}</h3>
-              <p className="text-blue-600 font-medium mb-2">{SITE_CONFIG.ceo.role}</p>
-              <p className="text-gray-600 mb-4">{SITE_CONFIG.ceo.title}</p>
-              <Badge>{t.about.representativeRole}</Badge>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-700">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-4xl sm:text-5xl font-bold text-white mb-2"><AnimatedCounter end={stat.value} suffix={stat.suffix} /></div>
-                <p className="text-blue-100">{stat.label[locale]}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {frequentSearches.slice(0, 7).map((term) => (
+                  <button key={term} onClick={() => { setQuery(term); window.location.href = '/login'; }} className="rounded-full border border-cyan-200/15 bg-white/[0.08] px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-cyan-400/15">{term}</button>
+                ))}
               </div>
-            ))}
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button onClick={() => { window.location.href = '/signup'; }}><UserPlus className="h-4 w-4" /> Creer mon compte</Button>
+                <Button variant="ghost" onClick={() => { window.location.href = '/login'; }}><LogIn className="h-4 w-4" /> Se connecter</Button>
+              </div>
+            </div>
+
+            <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                ['Categories', 'Produits classes par secteur'],
+                ['Demandes de prix', 'Recevoir plusieurs offres'],
+                ['Commande protegee', 'Paiement, livraison et preuves'],
+                ['Espace acheteur', 'Commandes, favoris et messages'],
+                ['Vendre sur Nexora', 'Boutique, stock et paiements'],
+                ['Mobile', 'Outils acheteur et vendeur'],
+              ].map(([title, text]) => (
+                <div key={title} className="rounded-lg border border-cyan-200/10 bg-white/[0.06] p-4">
+                  <p className="font-black">{title}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-400">{text}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-    </div>
-  );
-}
 
-// ============ CONTACT PAGE ============
-function ContactPage({ locale }) {
-  const t = translations[locale];
-  const contacts = [
-    { icon: Phone, label: '+243 971 037 431', href: 'tel:+243971037431' },
-    { icon: Phone, label: '+243 822 888 909', href: 'tel:+243822888909' },
-    { icon: Mail, label: SITE_CONFIG.contact.email, href: `mailto:${SITE_CONFIG.contact.email}` },
-    { icon: Globe, label: SITE_CONFIG.contact.website, href: `https://${SITE_CONFIG.contact.website}` }
-  ];
+          <div className="flex items-center">
+            <div className="w-full rounded-lg border border-cyan-200/15 bg-[#0b1728] p-5 shadow-2xl shadow-blue-950/30">
+              <div className="flex items-center justify-between gap-4 border-b border-cyan-200/10 pb-5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Tableau marketplace</p>
+                  <h2 className="mt-2 text-2xl font-black">Tout le commerce Nexora, organise.</h2>
+                </div>
+                <img src="/images/nexora-mark.png" alt="" className="h-16 w-16" />
+              </div>
 
-  return (
-    <div className="pt-20">
-      <section className="py-24 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <Badge className="mb-4 bg-white/10 text-white border-white/20">CONTACT</Badge>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">{t.contact.title}</h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">{t.contact.subtitle}</p>
-        </div>
-      </section>
-
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">{locale === 'fr' ? 'Parlons de Votre Projet' : 'Let\'s Talk About Your Project'}</h2>
-              <p className="text-gray-600 mb-8">{locale === 'fr' ? 'Contactez-nous par téléphone, email ou WhatsApp. Nous répondons rapidement !' : 'Contact us by phone, email or WhatsApp. We respond quickly!'}</p>
-              
-              <div className="space-y-4 mb-8">
-                {contacts.map((contact, i) => (
-                  <a key={i} href={contact.href} className="flex items-center space-x-4 p-4 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors group">
-                    <div className="w-12 h-12 rounded-xl bg-blue-100 group-hover:bg-blue-600 flex items-center justify-center transition-colors">
-                      <contact.icon className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
-                    </div>
-                    <span className="font-medium text-gray-900">{contact.label}</span>
-                  </a>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  ['Acheter', 'Comparer les offres, contacter les vendeurs et suivre la livraison.'],
+                  ['Vendre', 'Publier des produits, gerer les commandes et recevoir les paiements.'],
+                  ['Fournir', 'Repondre aux demandes de prix et negocier avec les acheteurs.'],
+                  ['Administrer', 'Verifier les comptes, surveiller les litiges et les transactions.'],
+                ].map(([title, text]) => (
+                  <div key={title} className="rounded-lg border border-cyan-200/10 bg-white/[0.06] p-4">
+                    <p className="font-black text-white">{title}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-300">{text}</p>
+                  </div>
                 ))}
               </div>
 
-              <Button onClick={() => window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}`, '_blank')} className="w-full bg-green-500 hover:bg-green-600 h-14 text-lg">
-                <MessageCircle className="w-6 h-6 mr-2" /> WhatsApp
-              </Button>
+              <div className="mt-5 rounded-lg border border-cyan-200/10 bg-gradient-to-r from-cyan-400/15 to-blue-600/15 p-4">
+                <p className="text-sm font-black uppercase tracking-[0.16em] text-cyan-200">Acces plateforme</p>
+                <p className="mt-2 text-sm font-semibold text-slate-300">Connectez-vous pour ouvrir les pages produits, fournisseurs, commandes, messages, profil et administration.</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button onClick={() => { window.location.href = '/login'; }}><LogIn className="h-4 w-4" /> Connexion</Button>
+                  <Button variant="ghost" onClick={() => { window.location.href = '/signup'; }}><UserPlus className="h-4 w-4" /> Inscription</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-cyan-300/10 bg-[#0b1728] px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-wrap items-center gap-3 text-sm font-black text-slate-200">
+              {[
+                'Toutes les categories',
+                'Fabricants verifies',
+                'Protection paiement',
+                'Accio Work / assistant IA',
+                'Exoneration de taxes',
+                'Centre acheteur',
+                'App & extension',
+                'Devenir fournisseur',
+              ].map((item) => (
+                <button key={item} onClick={() => { window.location.href = '/login'; }} className="rounded-full border border-cyan-200/10 bg-white/[0.06] px-4 py-2 hover:border-cyan-300/40 hover:bg-cyan-400/10">
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">Fonctionnalites marketplace</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Les services visibles dans une vraie plateforme d’achat.</h2>
+            </div>
+            <Button onClick={() => { window.location.href = '/signup'; }}><UserPlus className="h-4 w-4" /> Ouvrir un compte</Button>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {marketplaceShowcase.map((item) => (
+              <article key={item.title} className="rounded-lg border border-cyan-200/10 bg-[#0b1728] p-5 shadow-xl shadow-blue-950/10">
+                <h3 className="text-xl font-black">{item.title}</h3>
+                <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{item.text}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {item.items.map((entry) => (
+                    <span key={entry} className="rounded-full border border-cyan-200/10 bg-white/[0.06] px-3 py-1 text-xs font-bold text-cyan-100">{entry}</span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-[#081321] px-4 py-12 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">Centre acheteur</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight">Compte, panier, livraison et preferences.</h2>
+              <p className="mt-4 text-sm font-semibold leading-6 text-slate-300">
+                Les menus des captures sont integres comme modules Nexora : compte utilisateur, panier, pays/region, langue, devise, adresse de livraison, recherche par image, application mobile et assistance.
+              </p>
+              <div className="mt-6 rounded-lg border border-cyan-200/10 bg-white/[0.06] p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-black">Panier</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-300">Votre panier peut etre vide ou contenir produits, quantites, taxes, livraison et total.</p>
+                  </div>
+                  <ShoppingBag className="h-9 w-9 text-cyan-300" />
+                </div>
+                <Button className="mt-4" variant="ghost" onClick={() => { window.location.href = '/login'; }}>Acceder au panier</Button>
+              </div>
             </div>
 
-            <Card className="p-8 shadow-xl">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">{locale === 'fr' ? 'Demande de Devis' : 'Quote Request'}</h3>
-              <ContactForm locale={locale} type="quote" />
-            </Card>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {buyerTools.map(([title, text]) => (
+                <div key={title} className="rounded-lg border border-cyan-200/10 bg-[#0b1728] p-5">
+                  <p className="font-black">{title}</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">{text}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+        </section>
 
-// ============ PORTAL PAGE (ADMIN) ============
-function PortalPage({ locale }) {
-  const { user, login, logout, isAuthenticated } = useAuth();
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [loginError, setLoginError] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [stats, setStats] = useState(null);
-  const [data, setData] = useState({ leads: [], products: [], categories: [], orders: [], users: [], ads: [], articles: [] });
-  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', comparePrice: '', cost: '', categoryId: '', brand: '', stock: '', images: '', featured: false });
-  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', icon: '' });
-  const [adForm, setAdForm] = useState({ title: '', description: '', image: '', link: '', linkType: 'whatsapp', position: 'shop', active: true });
-  const [editingItem, setEditingItem] = useState(null);
-  const [showDialog, setShowDialog] = useState(null);
+        <section className="mx-auto grid max-w-7xl gap-5 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:px-8">
+          {[
+            ['Application mobile', 'Acheter, vendre, discuter avec les fournisseurs, payer et suivre les commandes depuis mobile.', ['App Store', 'Google Play']],
+            ['Nexora Lens', 'Recherche par image pour trouver des produits similaires, comparer les prix de gros et personnaliser les commandes.', ['Extension navigateur', 'Recherche image']],
+            ['Assistant IA sourcing', 'Aide a trouver des fabricants, preparer une demande de devis et comparer les offres 24/7.', ['Accio Work', 'Assistant achat']],
+          ].map(([title, text, actions]) => (
+            <article key={title} className="rounded-lg border border-cyan-200/10 bg-[#0b1728] p-5">
+              <p className="text-xl font-black">{title}</p>
+              <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{text}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {actions.map((action) => <span key={action} className="rounded-md bg-white px-3 py-2 text-xs font-black text-slate-950">{action}</span>)}
+              </div>
+            </article>
+          ))}
+        </section>
 
-  const handleLogin = async (e) => { e.preventDefault(); const result = await login(loginForm.username, loginForm.password); if (!result.success) setLoginError(locale === 'fr' ? 'Identifiants incorrects' : 'Invalid credentials'); else fetchAllData(); };
-
-  const fetchAllData = async () => {
-    try {
-      const results = await Promise.all(['stats', 'leads', 'products', 'categories', 'orders', 'users', 'ads', 'articles'].map(ep => fetch(`/api/${ep}`).then(r => r.json())));
-      setStats(results[0].data);
-      setData({ leads: results[1].data || [], products: results[2].data || [], categories: results[3].data || [], orders: results[4].data || [], users: results[5].data || [], ads: results[6].data || [], articles: results[7].data || [] });
-    } catch (error) { console.error('Error:', error); }
-  };
-
-  useEffect(() => { if (isAuthenticated) fetchAllData(); }, [isAuthenticated]);
-
-  const saveProduct = async () => {
-    const method = editingItem ? 'PUT' : 'POST';
-    const url = editingItem ? `/api/products/${editingItem.id}` : '/api/products';
-    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...productForm, price: parseFloat(productForm.price) || 0, comparePrice: parseFloat(productForm.comparePrice) || 0, cost: parseFloat(productForm.cost) || 0, stock: parseInt(productForm.stock) || 0, images: productForm.images ? productForm.images.split(',').map(s => s.trim()) : [], categoryName: data.categories.find(c => c.id === productForm.categoryId)?.name || '' }) });
-    setProductForm({ name: '', description: '', price: '', comparePrice: '', cost: '', categoryId: '', brand: '', stock: '', images: '', featured: false });
-    setEditingItem(null); setShowDialog(null); fetchAllData();
-  };
-
-  const saveCategory = async () => {
-    const method = editingItem ? 'PUT' : 'POST';
-    const url = editingItem ? `/api/categories/${editingItem.id}` : '/api/categories';
-    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(categoryForm) });
-    setCategoryForm({ name: '', description: '', icon: '' }); setEditingItem(null); setShowDialog(null); fetchAllData();
-  };
-
-  const saveAd = async () => {
-    const method = editingItem ? 'PUT' : 'POST';
-    const url = editingItem ? `/api/ads/${editingItem.id}` : '/api/ads';
-    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adForm) });
-    setAdForm({ title: '', description: '', image: '', link: '', linkType: 'whatsapp', position: 'shop', active: true }); setEditingItem(null); setShowDialog(null); fetchAllData();
-  };
-
-  const deleteItem = async (type, id) => { if (!confirm('Confirmer?')) return; await fetch(`/api/${type}/${id}`, { method: 'DELETE' }); fetchAllData(); };
-  const updateLeadStatus = async (id, status) => { await fetch(`/api/leads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); fetchAllData(); };
-  const updateOrderStatus = async (id, status) => { await fetch(`/api/orders/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); fetchAllData(); };
-
-  const printReceipt = (order) => {
-    const w = window.open('', '_blank');
-    w.document.write(`<html><head><title>Reçu #${order.orderNumber}</title><style>body{font-family:Arial;padding:20px;max-width:400px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.logo{font-size:24px;font-weight:bold}.item{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #ccc}.total{font-size:18px;font-weight:bold;text-align:right;margin-top:20px;padding-top:10px;border-top:2px solid #000}.footer{text-align:center;margin-top:30px;font-size:12px;color:#666}</style></head><body><div class="header"><div class="logo">NEXORA NTN</div><p>+243 971 037 431</p></div><p><strong>Reçu #${order.orderNumber}</strong></p><p>Date: ${new Date(order.createdAt).toLocaleString()}</p><p>Client: ${order.customer?.name || 'N/A'}</p><p>Tél: ${order.customer?.phone || 'N/A'}</p><div>${order.items?.map(i => `<div class="item"><span>${i.name} x${i.quantity}</span><span>$${i.price * i.quantity}</span></div>`).join('')}</div><div class="total">TOTAL: $${order.total}</div><div class="footer"><p>Merci!</p><p>www.nexora.cd</p></div></body></html>`);
-    w.document.close(); w.print();
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="pt-20 min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <Card className="w-full max-w-md mx-4 p-8">
-          <div className="text-center mb-8">
-            <img src={SITE_CONFIG.logo} alt="NEXORA" className="h-16 w-16 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold">Portail NEXORA</h1>
-            <p className="text-gray-500">Connexion admin</p>
+        <footer className="border-t border-cyan-300/10 bg-[#07111f] px-4 py-12 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+              {footerGroups.map(([title, links]) => (
+                <div key={title}>
+                  <p className="font-black text-white">{title}</p>
+                  <div className="mt-4 space-y-2">
+                    {links.map((link) => (
+                      <button key={link} onClick={() => { window.location.href = '/login'; }} className="block text-left text-sm font-semibold text-slate-400 hover:text-cyan-200">{link}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-10 grid gap-4 border-t border-cyan-300/10 pt-6 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-sm font-black text-white">Paiements et confiance</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['ID Check', 'SSL', 'VISA', 'Mastercard', 'PayPal', 'Apple Pay', 'Google Pay', 'Mobile Money', 'Banque'].map((item) => (
+                    <span key={item} className="rounded-md border border-cyan-200/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-slate-200">{item}</span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-black text-white">Restez connecte</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['Facebook', 'LinkedIn', 'X', 'Instagram', 'YouTube', 'TikTok'].map((item) => (
+                    <span key={item} className="rounded-full border border-cyan-200/10 bg-white/[0.06] px-3 py-1.5 text-xs font-bold text-slate-300">{item}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
+              {['Politiques et reglementations', 'Mentions legales', 'Regles de mise en vente', 'Droits de propriete intellectuelle', 'Politique de confidentialite', 'Conditions d’utilisation', 'Respect de l’integrite'].map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input placeholder="Nom d'utilisateur" value={loginForm.username} onChange={(e) => setLoginForm({...loginForm, username: e.target.value})} />
-            <Input type="password" placeholder="Mot de passe" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} />
-            {loginError && <p className="text-red-500 text-sm text-center">{loginError}</p>}
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">Se connecter</Button>
-          </form>
-        </Card>
-      </div>
+        </footer>
+      </main>
     );
   }
 
   return (
-    <div className="pt-20 min-h-screen bg-gray-100">
-      <div className="bg-white border-b sticky top-16 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={SITE_CONFIG.logo} alt="NEXORA" className="h-10 w-10" />
-            <div><h1 className="font-bold text-lg">Portail NEXORA</h1><p className="text-sm text-gray-500">{user?.name || 'Admin'}</p></div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={fetchAllData}><Bell className="w-4 h-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={logout}><LogOut className="w-4 h-4" /></Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-            <Card className="p-4"><div className="flex items-center gap-3"><DollarSign className="w-8 h-8 text-blue-600" /><div><p className="text-xs text-gray-500">Revenus</p><p className="text-xl font-bold">${stats.revenue?.total || 0}</p></div></div></Card>
-            <Card className="p-4"><div className="flex items-center gap-3"><ShoppingCart className="w-8 h-8 text-green-600" /><div><p className="text-xs text-gray-500">Commandes</p><p className="text-xl font-bold">{stats.orders?.total || 0}</p></div></div></Card>
-            <Card className="p-4"><div className="flex items-center gap-3"><Package className="w-8 h-8 text-purple-600" /><div><p className="text-xs text-gray-500">Produits</p><p className="text-xl font-bold">{stats.products?.total || 0}</p></div></div></Card>
-            <Card className="p-4"><div className="flex items-center gap-3"><Users className="w-8 h-8 text-amber-600" /><div><p className="text-xs text-gray-500">Leads</p><p className="text-xl font-bold">{stats.leads?.total || 0}</p></div></div></Card>
-            <Card className="p-4"><div className="flex items-center gap-3"><AlertTriangle className="w-8 h-8 text-red-600" /><div><p className="text-xs text-gray-500">Stock bas</p><p className="text-xl font-bold">{stats.products?.lowStock || 0}</p></div></div></Card>
-            <Card className="p-4"><div className="flex items-center gap-3"><Image className="w-8 h-8 text-cyan-600" /><div><p className="text-xs text-gray-500">Pubs</p><p className="text-xl font-bold">{stats.ads?.active || 0}</p></div></div></Card>
-          </div>
-        )}
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 flex-wrap">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="products">Produits</TabsTrigger>
-            <TabsTrigger value="categories">Catégories</TabsTrigger>
-            <TabsTrigger value="orders">Commandes</TabsTrigger>
-            <TabsTrigger value="leads">Leads</TabsTrigger>
-            <TabsTrigger value="ads">Publicités</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card><CardHeader><CardTitle>Commandes récentes</CardTitle></CardHeader><CardContent>{data.orders.slice(0, 5).map(order => (<div key={order.id} className="flex items-center justify-between py-2 border-b last:border-0"><div><p className="font-medium">#{order.orderNumber}</p><p className="text-sm text-gray-500">{order.customer?.name}</p></div><div className="text-right"><p className="font-bold">${order.total}</p><Badge>{order.status}</Badge></div></div>))}</CardContent></Card>
-              <Card><CardHeader><CardTitle>Leads récents</CardTitle></CardHeader><CardContent>{data.leads.slice(0, 5).map(lead => (<div key={lead.id} className="flex items-center justify-between py-2 border-b last:border-0"><div><p className="font-medium">{lead.name}</p><p className="text-sm text-gray-500">{lead.type}</p></div><Badge variant={lead.status === 'NEW' ? 'default' : 'secondary'}>{lead.status}</Badge></div>))}</CardContent></Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="products">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Produits ({data.products.length})</h2>
-              <Dialog open={showDialog === 'product'} onOpenChange={(open) => { setShowDialog(open ? 'product' : null); if (!open) { setEditingItem(null); setProductForm({ name: '', description: '', price: '', comparePrice: '', cost: '', categoryId: '', brand: '', stock: '', images: '', featured: false }); } }}>
-                <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" /> Ajouter</Button></DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader><DialogTitle>{editingItem ? 'Modifier' : 'Nouveau'} Produit</DialogTitle></DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <Input placeholder="Nom *" value={productForm.name} onChange={(e) => setProductForm({...productForm, name: e.target.value})} />
-                    <Textarea placeholder="Description" value={productForm.description} onChange={(e) => setProductForm({...productForm, description: e.target.value})} />
-                    <div className="grid grid-cols-3 gap-4">
-                      <Input type="number" placeholder="Prix *" value={productForm.price} onChange={(e) => setProductForm({...productForm, price: e.target.value})} />
-                      <Input type="number" placeholder="Ancien prix" value={productForm.comparePrice} onChange={(e) => setProductForm({...productForm, comparePrice: e.target.value})} />
-                      <Input type="number" placeholder="Stock" value={productForm.stock} onChange={(e) => setProductForm({...productForm, stock: e.target.value})} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Select value={productForm.categoryId} onValueChange={(v) => setProductForm({...productForm, categoryId: v})}><SelectTrigger><SelectValue placeholder="Catégorie" /></SelectTrigger><SelectContent>{data.categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent></Select>
-                      <Input placeholder="Marque" value={productForm.brand} onChange={(e) => setProductForm({...productForm, brand: e.target.value})} />
-                    </div>
-                    <Input placeholder="URLs images (virgule)" value={productForm.images} onChange={(e) => setProductForm({...productForm, images: e.target.value})} />
-                    <label className="flex items-center gap-2"><input type="checkbox" checked={productForm.featured} onChange={(e) => setProductForm({...productForm, featured: e.target.checked})} /> Vedette</label>
-                    <Button onClick={saveProduct} className="w-full">{editingItem ? 'Mettre à jour' : 'Créer'}</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="grid gap-4">
-              {data.products.map(product => (
-                <Card key={product.id} className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">{product.images?.[0] ? <img src={product.images[0]} alt="" className="w-full h-full object-cover" /> : <Package className="w-8 h-8 text-gray-300 m-auto" />}</div>
-                    <div className="flex-1"><h3 className="font-semibold">{product.name}</h3><p className="text-sm text-gray-500">{product.categoryName} • Stock: {product.stock}</p><span className="font-bold text-blue-600">${product.price}</span></div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setEditingItem(product); setProductForm({ ...product, price: product.price?.toString(), comparePrice: product.comparePrice?.toString(), stock: product.stock?.toString(), images: product.images?.join(', ') || '' }); setShowDialog('product'); }}><Edit className="w-4 h-4" /></Button>
-                      <Button size="sm" variant="destructive" onClick={() => deleteItem('products', product.id)}><Trash2 className="w-4 h-4" /></Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="categories">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Catégories ({data.categories.length})</h2>
-              <Dialog open={showDialog === 'category'} onOpenChange={(open) => { setShowDialog(open ? 'category' : null); if (!open) { setEditingItem(null); setCategoryForm({ name: '', description: '', icon: '' }); } }}>
-                <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" /> Ajouter</Button></DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>{editingItem ? 'Modifier' : 'Nouvelle'} Catégorie</DialogTitle></DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <Input placeholder="Nom *" value={categoryForm.name} onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})} />
-                    <Input placeholder="Description" value={categoryForm.description} onChange={(e) => setCategoryForm({...categoryForm, description: e.target.value})} />
-                    <Button onClick={saveCategory} className="w-full">{editingItem ? 'Mettre à jour' : 'Créer'}</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.categories.map(cat => (<Card key={cat.id} className="p-4"><div className="flex items-center justify-between"><div><h3 className="font-semibold">{cat.name}</h3><p className="text-sm text-gray-500">{cat.slug}</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => { setEditingItem(cat); setCategoryForm(cat); setShowDialog('category'); }}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="destructive" onClick={() => deleteItem('categories', cat.id)}><Trash2 className="w-4 h-4" /></Button></div></div></Card>))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <h2 className="text-xl font-bold mb-4">Commandes ({data.orders.length})</h2>
-            <div className="space-y-4">
-              {data.orders.map(order => (
-                <Card key={order.id} className="p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div><Badge className="mb-2">{order.status}</Badge><h3 className="font-bold">#{order.orderNumber}</h3><p className="text-gray-600">{order.customer?.name} • {order.customer?.phone}</p><p className="text-lg font-bold mt-2">${order.total}</p></div>
-                    <div className="flex flex-col gap-2">
-                      <Select value={order.status} onValueChange={(v) => updateOrderStatus(order.id, v)}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent>{Object.values(ORDER_STATUS).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-                      <Button size="sm" variant="outline" onClick={() => printReceipt(order)}><Printer className="w-4 h-4 mr-2" />Imprimer</Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="leads">
-            <h2 className="text-xl font-bold mb-4">Leads ({data.leads.length})</h2>
-            <div className="space-y-4">
-              {data.leads.map(lead => (
-                <Card key={lead.id} className="p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div><div className="flex gap-2 mb-2"><Badge variant={lead.status === 'NEW' ? 'default' : 'secondary'}>{lead.status}</Badge><Badge variant="outline">{lead.type}</Badge></div><h3 className="font-semibold">{lead.name}</h3><p className="text-gray-600">{lead.phone} • {lead.email}</p>{lead.message && <p className="text-sm bg-gray-50 p-2 rounded mt-2">{lead.message}</p>}</div>
-                    <Select value={lead.status} onValueChange={(v) => updateLeadStatus(lead.id, v)}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent>{['NEW', 'CONTACTED', 'CONFIRMED', 'INSTALLED'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="ads">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Publicités ({data.ads.length})</h2>
-              <Dialog open={showDialog === 'ad'} onOpenChange={(open) => { setShowDialog(open ? 'ad' : null); if (!open) { setEditingItem(null); setAdForm({ title: '', description: '', image: '', link: '', linkType: 'whatsapp', position: 'shop', active: true }); } }}>
-                <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" /> Ajouter</Button></DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>{editingItem ? 'Modifier' : 'Nouvelle'} Publicité</DialogTitle></DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <Input placeholder="Titre *" value={adForm.title} onChange={(e) => setAdForm({...adForm, title: e.target.value})} />
-                    <Textarea placeholder="Description" value={adForm.description} onChange={(e) => setAdForm({...adForm, description: e.target.value})} />
-                    <Input placeholder="URL image *" value={adForm.image} onChange={(e) => setAdForm({...adForm, image: e.target.value})} />
-                    <Select value={adForm.position} onValueChange={(v) => setAdForm({...adForm, position: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="home">Accueil</SelectItem><SelectItem value="shop">Boutique</SelectItem></SelectContent></Select>
-                    <Button onClick={saveAd} className="w-full">{editingItem ? 'Mettre à jour' : 'Créer'}</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.ads.map(ad => (<Card key={ad.id} className="overflow-hidden">{ad.image && <img src={ad.image} alt="" className="w-full h-32 object-cover" />}<CardContent className="p-4"><Badge className="mb-2">{ad.active ? 'Actif' : 'Inactif'}</Badge><h3 className="font-semibold">{ad.title}</h3><div className="flex gap-2 mt-4"><Button size="sm" variant="outline" onClick={() => { setEditingItem(ad); setAdForm(ad); setShowDialog('ad'); }}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="destructive" onClick={() => deleteItem('ads', ad.id)}><Trash2 className="w-4 h-4" /></Button></div></CardContent></Card>))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-}
-
-// ============ FOOTER ============
-function Footer({ locale, setCurrentPage }) {
-  const t = translations[locale];
-  const [email, setEmail] = useState('');
-  
-  const handleNewsletter = (e) => {
-    e.preventDefault();
-    window.open(`https://wa.me/${SITE_CONFIG.contact.whatsapp}?text=${encodeURIComponent(`Newsletter: ${email}`)}`, '_blank');
-    setEmail('');
-  };
-
-  return (
-    <footer className="bg-slate-900 text-white">
-      {/* Newsletter */}
-      <div className="border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#e8fbff_0,#f8fbff_34%,#eef4fb_100%)] text-slate-950">
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-cyan-300/10 bg-[#07111f] text-white shadow-2xl shadow-blue-950/30 transition lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex h-16 items-center justify-between border-b border-cyan-200/10 px-5">
+          <div className="flex items-center gap-3">
+            <img src="/images/nexora-mark.png" alt="Nexora" className="h-11 w-11" />
             <div>
-              <h3 className="text-2xl font-bold mb-2">{locale === 'fr' ? 'Restez Informé' : 'Stay Informed'}</h3>
-              <p className="text-gray-400">{locale === 'fr' ? 'Recevez nos offres et actualités' : 'Receive our offers and news'}</p>
+              <p className="text-sm font-black uppercase tracking-[0.18em]">NEXORA</p>
+              <p className="text-xs font-semibold text-slate-400">B2B marketplace</p>
             </div>
-            <form onSubmit={handleNewsletter} className="flex gap-2 w-full md:w-auto">
-              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-white/10 border-white/20 text-white placeholder:text-gray-400 w-64" />
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700"><Send className="w-4 h-4" /></Button>
-            </form>
           </div>
+          <button className="lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Fermer le menu">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="rounded-lg border border-cyan-200/10 bg-white/[0.06] p-4 shadow-lg shadow-black/10">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Session unique</p>
+            <p className="mt-2 font-black">{currentUser.name}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Badge>{currentUser.role}</Badge>
+            </div>
+            <label className="mt-3 block text-xs font-bold uppercase tracking-wide text-slate-400" htmlFor="sidebar-user">Changer de compte</label>
+            <select
+              id="sidebar-user"
+              value={state.currentUserId}
+              onChange={(event) => patch({ currentUserId: event.target.value })}
+              className="mt-2 w-full rounded-lg border border-cyan-200/10 bg-[#0d1d34] px-3 py-2 text-sm font-bold text-white outline-none ring-cyan-400 focus:ring-2"
+            >
+              {state.users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}
+            </select>
+          </div>
+
+          <nav className="mt-5 space-y-1 pb-6">
+            {nav.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActive(item.id);
+                    setMobileOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition ${active === item.id ? 'bg-gradient-to-r from-cyan-400 to-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+
+      <div className="lg:pl-72">
+        <header className="sticky top-0 z-40 border-b border-cyan-100 bg-white/85 shadow-sm shadow-blue-950/5 backdrop-blur-xl">
+          <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <button className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Ouvrir le menu">
+                <Menu className="h-6 w-6" />
+              </button>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Marketplace B2B/B2C</p>
+                <div className="flex items-center gap-2">
+                  <img src="/images/nexora-mark.png" alt="" className="h-7 w-7" />
+                  <h1 className="text-lg font-black sm:text-xl">NEXORA</h1>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={state.currentUserId}
+                onChange={(event) => patch({ currentUserId: event.target.value })}
+                className="hidden max-w-[260px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none ring-emerald-500 focus:ring-2 md:block"
+                aria-label="Changer de compte"
+              >
+                {state.users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}
+              </select>
+              <button className="relative rounded-lg border border-slate-200 bg-white p-2">
+                <Bell className="h-5 w-5" />
+                {state.notifications.some((item) => !item.read) && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500" />}
+              </button>
+              <Button variant="light" className="hidden md:inline-flex" onClick={() => dispatch(uiActions.setAssistantOpen(true))}><Zap className="h-4 w-4" /> IA</Button>
+              <Button variant="light" className="hidden md:inline-flex" onClick={() => setActive('profile')}><UserCircle className="h-4 w-4" /> Profil</Button>
+              <Button variant="light" className="hidden md:inline-flex" onClick={logoutUser}>Sortir</Button>
+              <Button variant="light" onClick={() => setActive('market')}><Store className="h-4 w-4" /> Sell</Button>
+            </div>
+          </div>
+        </header>
+
+        <div className="px-4 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8">
+          {active === 'home' && (
+            <div className="space-y-6">
+              <section className="relative overflow-hidden rounded-lg bg-slate-950 p-6 text-white shadow-sm">
+                <img src="/images/nexora-ecosystem-hero.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-950/40" />
+                <div className="relative grid gap-8 lg:grid-cols-[1fr_360px]">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-300">Welcome to Nexora</p>
+                    <h2 className="mt-3 max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">Find products, verified suppliers and factory quotes in one B2B marketplace.</h2>
+                    <p className="mt-4 max-w-2xl text-slate-300">Search products, compare manufacturers, post RFQs, pay with escrow, track delivery and manage disputes from one buyer center.</p>
+                    <div className="mt-6 rounded-lg bg-white p-2 text-slate-950 shadow-2xl">
+                      <div className="grid gap-2 md:grid-cols-[150px_1fr_auto]">
+                        <Select defaultValue={marketMode === 'suppliers' ? 'Manufacturers' : 'Products'} onChange={(event) => setMarketMode(event.target.value === 'Manufacturers' ? 'suppliers' : 'products')}>
+                          <option>Products</option>
+                          <option>Manufacturers</option>
+                        </Select>
+                        <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="What are you looking for?" />
+                        <Button onClick={() => setActive('market')}><Search className="h-4 w-4" /> Search</Button>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {frequentSearches.map((term) => (
+                        <button key={term} onClick={() => { setQuery(term); setActive('market'); }} className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">{term}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/10 p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg bg-white/10">
+                        {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : <UserCircle className="h-10 w-10 text-emerald-200" />}
+                      </div>
+                      <div>
+                        <p className="font-black">{currentUser.name}</p>
+                        <p className="text-sm font-semibold text-slate-300">{currentUser.role} · {currentUser.city}</p>
+                      </div>
+                    </div>
+                    <div className="mt-5 space-y-3 text-sm">
+                      {sourcingSteps.map((step) => (
+                        <div key={step.title} className="rounded-lg bg-white/10 p-3">
+                          <b>{step.title}</b>
+                          <span className="mt-1 block text-slate-300">{step.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="grid gap-4 lg:grid-cols-[280px_1fr_300px]">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-wide text-slate-500">Departements</p>
+                    <div className="mt-3 space-y-2">
+                      {categoryDepartments.map((department) => {
+                        const Icon = department.icon;
+                        return (
+                          <button key={department.category} onClick={() => { setCategoryFilter(department.category); setActive('market'); }} className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-left text-sm font-bold hover:border-emerald-300 hover:bg-emerald-50">
+                            <Icon className="h-5 w-5 text-emerald-700" />
+                            {department.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Recherche marketplace</p>
+                      <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Produit, fournisseur, categorie, ville..." className="pl-10" />
+                        </div>
+                        <Button onClick={() => setActive('market')}><Search className="h-4 w-4" /> Rechercher</Button>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {['Smartphone', 'Routeur', 'Solaire', 'Prix gros', 'Fournisseur verifie'].map((tag) => (
+                          <button key={tag} onClick={() => { setQuery(tag); setActive('market'); }} className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-700 ring-1 ring-emerald-200">{tag}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      {featuredProducts.slice(0, 3).map((product) => (
+                        <button key={product.id} onClick={() => { setSelectedProductId(product.id); setActive('market'); }} className="overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-sm hover:border-emerald-300">
+                          <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="h-28 w-full object-cover" />
+                          <div className="p-3">
+                            <p className="line-clamp-2 text-sm font-black">{product.name}</p>
+                            <p className="mt-1 text-xs font-bold text-slate-500">MOQ {product.moq || 1} · {currency(product.wholesalePrice || product.price)}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-black">Trade Assurance Nexora</p>
+                    <div className="mt-3 space-y-3 text-sm font-semibold text-slate-600">
+                      <p className="flex gap-2"><ShieldCheck className="h-5 w-5 text-emerald-700" /> Fournisseurs verifies KYC.</p>
+                      <p className="flex gap-2"><Lock className="h-5 w-5 text-emerald-700" /> Paiement bloque en escrow.</p>
+                      <p className="flex gap-2"><Truck className="h-5 w-5 text-emerald-700" /> Suivi livraison et preuve.</p>
+                      <p className="flex gap-2"><AlertTriangle className="h-5 w-5 text-emerald-700" /> Litige arbitre par Nexora.</p>
+                    </div>
+                    <Button className="mt-4 w-full" onClick={() => setActive('rfq')}><ReceiptText className="h-4 w-4" /> Demander un devis</Button>
+                  </div>
+                </div>
+              </section>
+
+              <section className="grid gap-4 lg:grid-cols-3">
+                <button onClick={() => setActive('rfq')} className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-emerald-300">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Request for Quotation</p>
+                  <h3 className="mt-2 text-xl font-black">Post sourcing requirements</h3>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">Receive quotes from multiple matching suppliers and convert the best one to escrow order.</p>
+                </button>
+                <button onClick={() => { setMarketMode('products'); setActive('market'); }} className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-emerald-300">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Top Ranking</p>
+                  <h3 className="mt-2 text-xl font-black">Best products and suppliers</h3>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">Sponsored products, verified vendors, popular categories and business recommendations.</p>
+                </button>
+                <button onClick={() => setActive('messaging')} className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm hover:border-emerald-300">
+                  <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Fast customization</p>
+                  <h3 className="mt-2 text-xl font-black">Negotiate directly</h3>
+                  <p className="mt-2 text-sm font-semibold text-slate-600">Contact supplier, request samples, define branding, delivery and payment terms.</p>
+                </button>
+              </section>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <Metric icon={ShoppingBag} label="Commandes" value={state.orders.filter((order) => order.customerId === currentUser.id || order.sellerId === currentUser.id).length} note="Achat ou vente" />
+                <Metric icon={ReceiptText} label="RFQ" value={scopedRfqs.length} note="Demandes et devis" />
+                <Metric icon={Wallet} label="Wallet" value={currency(currentUser.availableBalance || 0)} note="Solde disponible" />
+                <Metric icon={AlertTriangle} label="Litiges" value={scopedDisputes.length} note="A suivre" />
+              </div>
+
+              <Panel title="Recommended for your business" icon={ShoppingBag}>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {featuredProducts.slice(0, 4).map((product) => {
+                    const supplier = state.users.find((user) => user.id === product.sellerId);
+                    return (
+                      <article key={product.id} className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                        <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="h-32 w-full object-cover" />
+                        <div className="p-4">
+                          <p className="line-clamp-2 font-black">{product.name}</p>
+                          <p className="mt-2 text-sm font-bold text-emerald-700">{currency(product.wholesalePrice || product.price)} · MOQ {product.moq || 1}</p>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">{supplier?.name || 'Supplier'} · {product.city}</p>
+                          <Button className="mt-3 w-full" variant="light" onClick={() => { setSelectedProductId(product.id); setActive('market'); }}>View product</Button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </Panel>
+
+              <Panel title="Actions rapides" icon={Zap}>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    ['market', ShoppingBag, 'Marketplace', 'Catalogue et panier'],
+                    ['suppliers', Building2, 'Fournisseurs', 'Annuaire et KYC'],
+                    ['rfq', ReceiptText, 'RFQ / Devis', 'Negocier un prix'],
+                    ['wallet', Wallet, 'Wallet', 'Escrow et retraits'],
+                  ].map(([id, Icon, title, text]) => (
+                    <button key={id} onClick={() => setActive(id)} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm"><Icon className="h-5 w-5" /></span>
+                      <span><b className="block">{title}</b><span className="text-xs font-semibold text-slate-500">{text}</span></span>
+                    </button>
+                  ))}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'dashboard' && (
+            <div className="space-y-6">
+              <section className="relative overflow-hidden rounded-lg bg-slate-950 p-6 text-white shadow-sm">
+                <img src="/images/nexora-ecosystem-hero.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-30" />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-950/40" />
+                <div className="relative grid gap-8 lg:grid-cols-[1fr_0.75fr]">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-300">Compte unique + services intégrés</p>
+                    <h2 className="mt-3 max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">Piloter commerce, transport, cloud, logiciels, logistique et paiements depuis une seule plateforme.</h2>
+                    <p className="mt-4 max-w-2xl text-slate-300">Cette version permet de simuler les workflows clés du cahier des charges : création, paiement, escrow, validation, KYC, messagerie et administration.</p>
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {modules.map((item) => (
+                        <span key={item.id} className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-sm font-bold">{item.label}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <Panel title="Notifications" icon={Bell}>
+                    <div className="space-y-3">
+                      {state.notifications.slice(0, 4).map((item) => (
+                        <div key={item.id} className="rounded-lg bg-slate-50 p-3 text-slate-900">
+                          <p className="text-xs font-black text-emerald-700">{item.type}</p>
+                          <p className="mt-1 text-sm font-semibold">{item.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Panel>
+                </div>
+              </section>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <Metric icon={Users} label="Utilisateurs" value={stats.users} note={`${stats.sellers} vendeur(s) · ${stats.suppliers} fournisseur(s)`} />
+                <Metric icon={ShoppingBag} label="Produits" value={stats.products} note={`${stats.rfqs} demande(s) RFQ ouvertes`} />
+                <Metric icon={Lock} label="Fonds escrow" value={currency(stats.escrow)} note="Transactions sécurisées" />
+                <Metric icon={Zap} label="Opérations ouvertes" value={stats.openOps} note={`${stats.disputes} litige(s) a arbitrer`} />
+              </div>
+
+              <div className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+                <Panel title="Modules opérationnels" icon={Layers3}>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {modules.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button key={item.id} onClick={() => setActive(item.id)} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm">
+                              <Icon className="h-5 w-5" />
+                            </span>
+                            <div>
+                              <p className="font-black">{item.label}</p>
+                              <p className="text-xs font-semibold text-slate-500">Ouvrir le module</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Panel>
+
+                <Panel title="Implantation Phase 1" icon={MapPin}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {cities.map((city) => (
+                      <div key={city} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold">{city}</div>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
+              <Panel title="Journal d’audit" icon={FileCheck2}>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                        <th className="py-3">Date</th>
+                        <th>Action</th>
+                        <th>Entité</th>
+                        <th>Ville</th>
+                        <th>Détail</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.auditLogs.filter((log) => canSeeCity(log.city)).slice(0, 20).map((log) => (
+                        <tr key={log.id} className="border-b border-slate-100">
+                          <td className="py-3">{new Date(log.createdAt).toLocaleString('fr-FR')}</td>
+                          <td className="font-black">{log.action}</td>
+                          <td>{log.entity}</td>
+                          <td>{log.city}</td>
+                          <td>{log.detail}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'market' && (
+            <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
+              <div className="space-y-6">
+                <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Nexora marketplace</p>
+                      <h2 className="mt-1 text-2xl font-black">Catalogue B2B/B2C, fournisseurs et devis</h2>
+                    </div>
+                    <div className="flex rounded-lg bg-slate-100 p-1">
+                      {[
+                        ['products', 'Produits'],
+                        ['suppliers', 'Fournisseurs'],
+                        ['rfq', 'RFQ'],
+                      ].map(([id, label]) => (
+                        <button key={id} onClick={() => setMarketMode(id)} className={`rounded-md px-3 py-2 text-sm font-black ${marketMode === id ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500'}`}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher produit, fournisseur, categorie, ville..." className="pl-10" />
+                    </div>
+                    <Select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+                      <option value="ALL">Toutes categories</option>
+                      {categoryDepartments.map((department) => <option key={department.category} value={department.category}>{department.name}</option>)}
+                    </Select>
+                    <Select value={cityFilter} onChange={(event) => setCityFilter(event.target.value)}>
+                      <option value="ALL">Toutes villes</option>
+                      {cities.map((city) => <option key={city}>{city}</option>)}
+                    </Select>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {categoryDepartments.map((department) => {
+                      const Icon = department.icon;
+                      return (
+                        <button key={department.category} onClick={() => setCategoryFilter(department.category)} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-black ${categoryFilter === department.category ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                          <Icon className="h-4 w-4" />
+                          {department.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {marketMode === 'suppliers' && (
+                  <Panel title="Fournisseurs verifies" icon={Building2}>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {supplierUsers.map((supplier) => {
+                        const supplierProducts = state.products.filter((product) => product.sellerId === supplier.id);
+                        return (
+                          <article key={supplier.id} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">{supplier.role}</p>
+                                <h3 className="mt-1 text-lg font-black">{supplier.name}</h3>
+                                <p className="mt-1 text-sm font-semibold text-slate-600">{supplier.city} · {supplier.companyName || 'Entreprise non renseignee'}</p>
+                              </div>
+                              <Badge>{supplier.supplierLevel || supplier.kycStatus}</Badge>
+                            </div>
+                            <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                              <p><span className="block text-xs font-bold text-slate-500">Produits</span><b>{supplierProducts.length}</b></p>
+                              <p><span className="block text-xs font-bold text-slate-500">KYC</span><b>{supplier.kycStatus}</b></p>
+                              <p><span className="block text-xs font-bold text-slate-500">Ville</span><b>{supplier.city}</b></p>
+                            </div>
+                            <div className="mt-4 flex gap-2">
+                              <Button className="flex-1" onClick={() => setSelectedSupplierId(supplier.id)}>Voir boutique</Button>
+                              <Button variant="light" onClick={() => setActive('rfq')}>Demander devis</Button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </Panel>
+                )}
+
+                {marketMode === 'rfq' && (
+                  <Panel title="Acheter en gros par demande de devis" icon={ReceiptText}>
+                    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+                      <form action={createRfq} className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <Field label="Produit recherche"><Input name="title" required placeholder="Ex: 500 smartphones" /></Field>
+                        <Field label="Categorie"><Select name="category">{categoryDepartments.map((item) => <option key={item.category}>{item.category}</option>)}</Select></Field>
+                        <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                        <Field label="Quantite"><Input name="quantity" type="number" min="1" required /></Field>
+                        <Field label="Prix cible"><Input name="targetPrice" type="number" min="0" /></Field>
+                        <Field label="Details"><Textarea name="notes" placeholder="Specifications, marque, livraison, garantie..." /></Field>
+                        <Button className="w-full"><ReceiptText className="h-4 w-4" /> Publier la demande</Button>
+                      </form>
+                      <div className="grid gap-3">
+                        {scopedRfqs.slice(0, 4).map((rfq) => (
+                          <div key={rfq.id} className="rounded-lg border border-slate-200 bg-white p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-black">{rfq.title}</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-600">{rfq.quantity} unite(s) · {rfq.city} · cible {currency(rfq.targetPrice)}</p>
+                              </div>
+                              <Badge>{rfq.status}</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Panel>
+                )}
+
+                {marketMode === 'products' && (
+                <Panel title="NEXORA Market" icon={Store}>
+                  <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+                      <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher produit, catégorie, ville..." className="pl-10" />
+                    </div>
+                    <Select value={cityFilter} onChange={(event) => setCityFilter(event.target.value)}>
+                      <option value="ALL">Toutes les villes</option>
+                      {cities.map((city) => <option key={city}>{city}</option>)}
+                    </Select>
+                  </div>
+                  <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                    {filteredProducts.map((product) => (
+                      <article key={product.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-emerald-300 hover:shadow-md">
+                        <button onClick={() => setSelectedProductId(product.id)} className="block w-full text-left">
+                          <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="h-44 w-full bg-slate-100 object-cover" />
+                        </button>
+                        <div className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-emerald-700">{product.category}</p>
+                            <h3 className="mt-1 text-lg font-black">{product.name}</h3>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            {product.sponsored && <Badge>SPONSORED</Badge>}
+                            <Badge>{product.status}</Badge>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                          <p><span className="block text-xs font-bold text-slate-500">Prix</span><b>{currency(product.price)}</b></p>
+                          <p><span className="block text-xs font-bold text-slate-500">Stock</span><b>{product.stock}</b></p>
+                          <p><span className="block text-xs font-bold text-slate-500">Ville</span><b>{product.city}</b></p>
+                        </div>
+                        <p className="mt-3 text-xs font-semibold text-slate-500">Commission Nexora : {product.commissionRate || 8}% · SKU {product.sku || 'N/A'}</p>
+                        {product.b2bEnabled && (
+                          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-900">
+                            MOQ {product.moq || 1} · Gros {currency(product.wholesalePrice || product.price)} · Delai {product.leadTime || '48h'}
+                          </div>
+                        )}
+                        <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+                          <Button onClick={() => addToCart(product)}>
+                            <Plus className="h-4 w-4" />
+                            Panier
+                          </Button>
+                          <Button variant="light" onClick={() => toggleFavorite(product.id)}>
+                            {state.favorites.some((item) => item.userId === currentUser.id && item.productId === product.id) ? 'Favori' : 'Suivre'}
+                          </Button>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <Button variant="light" onClick={() => createRfqFromProduct(product)}>Devis</Button>
+                          <Button variant="light" onClick={() => contactSupplierForProduct(product)}>Contacter</Button>
+                        </div>
+                        <Button variant="dark" className="mt-2 w-full" onClick={() => setSelectedProductId(product.id)}>Voir fiche</Button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </Panel>
+                )}
+
+                <Panel title="Publier un produit vendeur" icon={PackageCheck}>
+                  <form action={addProduct} className="grid gap-4 md:grid-cols-3">
+                    <Field label="Nom"><Input name="name" required placeholder="Ex: Laptop Dell Latitude" /></Field>
+                    <Field label="Catégorie"><Input name="category" required placeholder="Informatique" /></Field>
+                    <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                    <Field label="Prix USD"><Input name="price" type="number" required min="1" /></Field>
+                    <Field label="Stock"><Input name="stock" type="number" required min="0" /></Field>
+                    <Field label="MOQ B2B"><Input name="moq" type="number" min="1" defaultValue="1" /></Field>
+                    <Field label="Prix grossiste"><Input name="wholesalePrice" type="number" min="0" /></Field>
+                    <Field label="Delai fournisseur"><Input name="leadTime" placeholder="Ex: 5 jours" /></Field>
+                    <Field label="Origine"><Input name="origin" defaultValue="RDC" /></Field>
+                    <Field label="Certifications"><Input name="certifications" placeholder="RCCM, garantie, ISO" /></Field>
+                    <label className="flex items-end gap-2 pb-3 text-sm font-bold text-slate-700">
+                      <input name="sponsored" type="checkbox" className="h-4 w-4" />
+                      Produit sponsorisé
+                    </label>
+                    <Button className="md:col-span-3"><Plus className="h-4 w-4" /> Publier</Button>
+                  </form>
+                </Panel>
+                <Panel title="Créer une boutique vendeur" icon={Store}>
+                  <form action={createShop} className="grid gap-4 md:grid-cols-2">
+                    <Field label="Nom boutique"><Input name="name" required placeholder="Nom de votre boutique" /></Field>
+                    <Field label="Téléphone"><Input name="phone" required placeholder="Telephone" /></Field>
+                    <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                    <Field label="Horaires"><Input name="openingHours" defaultValue="08:00 - 18:00" /></Field>
+                    <Field label="Adresse"><Input name="address" required /></Field>
+                    <Field label="Description"><Input name="description" required /></Field>
+                    <Button className="md:col-span-2"><Plus className="h-4 w-4" /> Soumettre boutique</Button>
+                  </form>
+                </Panel>
+
+                <Panel title="Validation produits par NEXORA" icon={ShieldCheck}>
+                  <div className="grid gap-3">
+                    {scopedProducts.filter((product) => product.status !== 'APPROVED').map((product) => (
+                      <div key={product.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black">{product.name}</p>
+                            <p className="mt-1 text-sm text-slate-600">{product.category} · {product.city} · {currency(product.price)}</p>
+                          </div>
+                          <Badge>{product.status}</Badge>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button variant="light" onClick={() => moderateProduct(product.id, 'APPROVED')}>Approuver</Button>
+                          <Button variant="danger" onClick={() => moderateProduct(product.id, 'REJECTED', 'Informations produit insuffisantes')}>Rejeter</Button>
+                        </div>
+                      </div>
+                    ))}
+                    {scopedProducts.filter((product) => product.status !== 'APPROVED').length === 0 && (
+                      <p className="rounded-lg bg-slate-50 p-4 text-sm font-semibold text-slate-500">Aucun produit en attente dans votre périmètre.</p>
+                    )}
+                  </div>
+                </Panel>
+              </div>
+
+              <Panel title="Panier & commande escrow" icon={ReceiptText}>
+                <div className="space-y-3">
+                  {cart.length === 0 && <p className="rounded-lg bg-slate-50 p-4 text-sm font-semibold text-slate-500">Ajoute un produit pour créer une commande avec fonds bloqués.</p>}
+                  {cart.map((item) => (
+                    <div key={item.productId} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="font-black">{item.name}</p>
+                      <p className="text-sm text-slate-600">{item.quantity} × {currency(item.price)}</p>
+                    </div>
+                  ))}
+                  <div className="border-t border-slate-200 pt-4">
+                    <div className="flex items-center justify-between font-black">
+                      <span>Total</span>
+                      <span>{currency(cart.reduce((sum, item) => sum + item.price * item.quantity, 0))}</span>
+                    </div>
+                    <Button disabled={!cart.length} className="mt-4 w-full" onClick={createMarketOrders}>
+                      <Lock className="h-4 w-4" />
+                      Payer et bloquer en escrow
+                    </Button>
+                  </div>
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'suppliers' && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Metric icon={Building2} label="Fournisseurs" value={supplierUsers.length} note="Vendeurs et grossistes actifs" />
+                <Metric icon={BadgeCheck} label="Verifies" value={supplierUsers.filter((user) => user.kycStatus === 'VERIFIED').length} note="KYC valide" />
+                <Metric icon={ShoppingBag} label="Produits B2B" value={state.products.filter((product) => product.b2bEnabled).length} note="MOQ et prix grossiste" />
+              </div>
+              <Panel title="Annuaire fournisseurs" icon={Building2}>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {supplierUsers.map((supplier) => {
+                    const supplierProducts = state.products.filter((product) => product.sellerId === supplier.id);
+                    const shop = state.shops.find((item) => item.sellerId === supplier.id);
+                    return (
+                      <article key={supplier.id} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-emerald-700">{supplier.role}</p>
+                            <h3 className="mt-1 text-lg font-black">{supplier.name}</h3>
+                            <p className="mt-1 text-sm font-semibold text-slate-600">{supplier.city} · {shop?.name || 'Boutique a configurer'}</p>
+                          </div>
+                          <Badge>{supplier.kycStatus}</Badge>
+                        </div>
+                        <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                          <p><span className="block text-xs font-bold text-slate-500">Niveau</span><b>{supplier.supplierLevel || 'STANDARD'}</b></p>
+                          <p><span className="block text-xs font-bold text-slate-500">Produits</span><b>{supplierProducts.length}</b></p>
+                          <p><span className="block text-xs font-bold text-slate-500">Solde</span><b>{currency(supplier.availableBalance || 0)}</b></p>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button variant="light" onClick={() => patch({ users: state.users.map((user) => user.id === supplier.id ? { ...user, kycStatus: 'VERIFIED', sellerStatus: 'VERIFIED', supplierLevel: 'GOLD' } : user) })}>Certifier</Button>
+                          <Button variant="danger" onClick={() => patch({ users: state.users.map((user) => user.id === supplier.id ? { ...user, status: 'SUSPENDED' } : user) })}>Suspendre</Button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'rfq' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <div className="space-y-6">
+                <Panel title="Demande de devis acheteur" icon={ReceiptText}>
+                  <form action={createRfq} className="space-y-4">
+                    <Field label="Besoin"><Input name="title" required placeholder="Ex: 200 sacs de ciment" /></Field>
+                    <Field label="Categorie"><Input name="category" required placeholder="Construction" /></Field>
+                    <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                    <Field label="Quantite"><Input name="quantity" type="number" min="1" required /></Field>
+                    <Field label="Prix cible / unite"><Input name="targetPrice" type="number" min="0" /></Field>
+                    <Field label="Delai souhaite"><Input name="deliveryDeadline" placeholder="Ex: 10 jours" /></Field>
+                    <Field label="Details"><Textarea name="notes" placeholder="Specifications, qualite, livraison..." /></Field>
+                    <Button className="w-full"><Plus className="h-4 w-4" /> Publier RFQ</Button>
+                  </form>
+                </Panel>
+                <Panel title="Repondre comme fournisseur" icon={Store}>
+                  <form action={sendQuote} className="space-y-4">
+                    <Field label="RFQ"><Select name="rfqId">{scopedRfqs.filter((rfq) => rfq.status === 'OPEN').map((rfq) => <option key={rfq.id} value={rfq.id}>{rfq.title}</option>)}</Select></Field>
+                    <Field label="Prix unitaire"><Input name="unitPrice" type="number" min="1" required /></Field>
+                    <Field label="Quantite"><Input name="quantity" type="number" min="1" required /></Field>
+                    <Field label="Delai fournisseur"><Input name="leadTime" required placeholder="Ex: 5 jours" /></Field>
+                    <Field label="Conditions"><Textarea name="paymentTerms" defaultValue="Escrow Nexora, liberation apres reception" /></Field>
+                    <Button className="w-full"><ArrowRight className="h-4 w-4" /> Envoyer devis</Button>
+                  </form>
+                </Panel>
+              </div>
+              <div className="space-y-6">
+                <Panel title="Demandes ouvertes" icon={Search}>
+                  <div className="grid gap-3">
+                    {scopedRfqs.map((rfq) => (
+                      <div key={rfq.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black">{rfq.title}</p>
+                            <p className="mt-1 text-sm text-slate-600">{rfq.category} · {rfq.city} · {rfq.quantity} unite(s)</p>
+                          </div>
+                          <Badge>{rfq.status}</Badge>
+                        </div>
+                        <p className="mt-3 text-sm font-semibold text-slate-700">{rfq.notes}</p>
+                        <p className="mt-2 text-xs font-bold text-slate-500">Prix cible {currency(rfq.targetPrice)} · Delai {rfq.deliveryDeadline}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+                <Panel title="Devis fournisseurs" icon={ReceiptText}>
+                  <div className="grid gap-3">
+                    {scopedQuotes.map((quote) => {
+                      const rfq = state.rfqs.find((item) => item.id === quote.rfqId);
+                      const supplier = state.users.find((item) => item.id === quote.supplierId);
+                      const total = Number(quote.unitPrice || 0) * Number(quote.quantity || 0);
+                      return (
+                        <div key={quote.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="font-black">{rfq?.title || quote.rfqId}</p>
+                              <p className="mt-1 text-sm text-slate-600">{supplier?.name || quote.supplierId} · {quote.quantity} x {currency(quote.unitPrice)}</p>
+                            </div>
+                            <Badge>{quote.status}</Badge>
+                          </div>
+                          <p className="mt-3 text-sm font-semibold text-slate-700">Total {currency(total)} · Delai {quote.leadTime}</p>
+                          <p className="mt-1 text-xs font-bold text-slate-500">{quote.paymentTerms}</p>
+                          <Button disabled={quote.status === 'ACCEPTED'} className="mt-4 w-full" onClick={() => acceptQuote(quote)}>
+                            <Lock className="h-4 w-4" />
+                            Accepter et bloquer en escrow
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Panel>
+              </div>
+            </div>
+          )}
+
+          {active === 'cab' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <Panel title="Commander une course" icon={Car}>
+                <form action={createRide} className="space-y-4">
+                  <Field label="Service"><Select name="service"><option>Taxi</option><option>Moto-taxi</option><option>Livraison repas</option><option>Transport entreprise</option></Select></Field>
+                  <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <Field label="Départ"><Input name="pickup" required placeholder="Adresse de départ" /></Field>
+                  <Field label="Destination"><Input name="destination" required placeholder="Adresse d’arrivée" /></Field>
+                  <Field label="Tarif estimé USD"><Input name="fare" type="number" required min="1" defaultValue="12" /></Field>
+                  <Button className="w-full"><Car className="h-4 w-4" /> Lancer la course</Button>
+                </form>
+              </Panel>
+              <Panel title="Courses en temps réel" icon={MapPin}>
+                <div className="grid gap-3">
+                  {state.rides.map((ride) => (
+                    <div key={ride.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black">{ride.service} · {ride.city}</p>
+                          <p className="mt-1 text-sm text-slate-600">{ride.pickup} → {ride.destination}</p>
+                        </div>
+                        <Badge>{ride.status}</Badge>
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <span className="font-black">{currency(ride.fare)}</span>
+                        <Badge>{ride.paymentStatus}</Badge>
+                        <Button variant="light" onClick={() => updateCollection('rides', ride.id, { status: 'COMPLETED', paymentStatus: 'RELEASED', rating: 5 })}>Terminer</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'logistics' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <Panel title="Créer une livraison" icon={Truck}>
+                <form action={createDelivery} className="space-y-4">
+                  <Field label="Type"><Select name="type"><option>Livraison urbaine</option><option>Livraison inter-ville</option><option>Livraison nationale</option></Select></Field>
+                  <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <Field label="Ramassage"><Input name="pickup" required /></Field>
+                  <Field label="Destination"><Input name="destination" required /></Field>
+                  <Field label="Prix USD"><Input name="price" type="number" required min="1" defaultValue="7" /></Field>
+                  <Button className="w-full"><Truck className="h-4 w-4" /> Affecter livraison</Button>
+                </form>
+              </Panel>
+              <Panel title="Suivi logistique" icon={PackageCheck}>
+                <div className="grid gap-3">
+                  {state.deliveries.map((delivery) => (
+                    <div key={delivery.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black">{delivery.type} · {delivery.city}</p>
+                          <p className="mt-1 text-sm text-slate-600">{delivery.pickup} → {delivery.destination}</p>
+                        </div>
+                        <Badge>{delivery.status}</Badge>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button variant="light" onClick={() => updateCollection('deliveries', delivery.id, { status: 'IN_TRANSIT' })}>En transit</Button>
+                        <Button variant="light" onClick={() => updateCollection('deliveries', delivery.id, { status: 'DELIVERED', proof: 'SIGNED_PHOTO' })}>Preuve photo + signature</Button>
+                        <Badge>{delivery.proof}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'software' && (
+            <Panel title="NEXORA Software Store" icon={Code2}>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {state.software.map((item) => (
+                  <article key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-violet-700">{item.type}</p>
+                        <h3 className="mt-1 text-xl font-black">{item.name}</h3>
+                      </div>
+                      <Badge>{item.active ? 'ACTIVE' : 'DISABLED'}</Badge>
+                    </div>
+                    <p className="mt-4 text-sm font-semibold text-slate-600">{item.license}</p>
+                    <div className="mt-5 flex items-center justify-between">
+                      <b>{currency(item.price)}</b>
+                      <span className="text-sm font-bold text-slate-500">{item.downloads} téléchargements</span>
+                    </div>
+                    <Button className="mt-4 w-full" onClick={() => buySoftware(item)}>
+                      <CreditCard className="h-4 w-4" />
+                      Acheter licence
+                    </Button>
+                  </article>
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {active === 'cloud' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <Panel title="Demande Cloud / IT" icon={Cloud}>
+                <form action={createCloudRequest} className="space-y-4">
+                  <Field label="Service"><Select name="service"><option>Création site web</option><option>Application mobile</option><option>ERP</option><option>CRM</option><option>Hébergement</option><option>Cybersécurité</option><option>Maintenance informatique</option></Select></Field>
+                  <Field label="Priorité"><Select name="priority"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></Select></Field>
+                  <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <Field label="Budget USD"><Input name="budget" type="number" min="0" defaultValue="500" /></Field>
+                  <Field label="Besoin"><Textarea name="message" required placeholder="Décrivez le projet..." /></Field>
+                  <Button className="w-full"><BriefcaseBusiness className="h-4 w-4" /> Ouvrir ticket</Button>
+                </form>
+              </Panel>
+              <Panel title="Pipeline services technologiques" icon={Headphones}>
+                <div className="grid gap-3">
+                  {state.cloudRequests.map((request) => (
+                    <div key={request.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black">{request.service}</p>
+                          <p className="mt-1 text-sm text-slate-600">{request.message}</p>
+                        </div>
+                        <Badge>{request.status}</Badge>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge>{request.priority}</Badge>
+                        <span className="font-black">{currency(request.budget)}</span>
+                        <Button variant="light" onClick={() => updateCollection('cloudRequests', request.id, { status: 'IN_PROGRESS' })}>En production</Button>
+                        <Button variant="light" onClick={() => updateCollection('cloudRequests', request.id, { status: 'DELIVERED' })}>Livré</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'disputes' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <Panel title="Ouvrir un litige" icon={AlertTriangle}>
+                <form action={openDispute} className="space-y-4">
+                  <Field label="Reference commande"><Select name="reference">{state.orders.map((order) => <option key={order.id} value={order.orderNumber}>{order.orderNumber}</option>)}</Select></Field>
+                  <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <Field label="Motif"><Textarea name="reason" required placeholder="Produit non recu, qualite, remboursement..." /></Field>
+                  <Button className="w-full" variant="danger"><AlertTriangle className="h-4 w-4" /> Ouvrir litige</Button>
+                </form>
+              </Panel>
+              <Panel title="Centre arbitrage Nexora" icon={ShieldCheck}>
+                <div className="grid gap-3">
+                  {scopedDisputes.map((dispute) => {
+                    const owner = state.users.find((user) => user.id === dispute.openedById);
+                    return (
+                      <div key={dispute.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black">{dispute.reference}</p>
+                            <p className="mt-1 text-sm text-slate-600">{owner?.name || dispute.openedById} · {dispute.city}</p>
+                          </div>
+                          <Badge>{dispute.status}</Badge>
+                        </div>
+                        <p className="mt-3 text-sm font-semibold text-slate-700">{dispute.reason}</p>
+                        {dispute.resolution && <p className="mt-2 text-xs font-bold text-emerald-700">{dispute.resolution}</p>}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button variant="light" onClick={() => resolveDispute(dispute.id, 'Remboursement client valide par Nexora')}>Rembourser client</Button>
+                          <Button variant="light" onClick={() => resolveDispute(dispute.id, 'Paiement fournisseur libere apres preuve acceptee')}>Liberer fournisseur</Button>
+                          <Button variant="danger" onClick={() => resolveDispute(dispute.id, 'Litige classe sans suite')}>Classer</Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'wallet' && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Metric icon={Wallet} label="Fonds escrow" value={currency(stats.escrow)} note="À valider ou libérer" />
+                <Metric icon={Banknote} label="Commissions acquises" value={currency(stats.revenue)} note="Transactions libérées" />
+                <Metric icon={AlertTriangle} label="Litiges" value={state.transactions.filter((item) => item.status === 'DISPUTED').length} note="À arbitrer" />
+              </div>
+              <Panel title="Transactions escrow" icon={Landmark}>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                        <th className="py-3">Module</th>
+                        <th>Référence</th>
+                        <th>Montant</th>
+                        <th>Commission</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {state.transactions.map((transaction) => (
+                        <tr key={transaction.id} className="border-b border-slate-100">
+                          <td className="py-3 font-black">{transaction.module}</td>
+                          <td>{transaction.reference}</td>
+                          <td>{currency(transaction.amount)}</td>
+                          <td>{currency(transaction.commission)}</td>
+                          <td><Badge>{transaction.status}</Badge></td>
+                          <td className="flex gap-2 py-2">
+                            <Button variant="light" disabled={transaction.status === 'RELEASED'} onClick={() => releaseTransaction(transaction)}>Libérer</Button>
+                            <Button variant="danger" onClick={() => updateCollection('transactions', transaction.id, { status: 'DISPUTED' })}>Litige</Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
+              <div className="grid gap-6 xl:grid-cols-2">
+                <Panel title="Retrait vendeur" icon={Wallet}>
+                  <form action={requestWithdrawal} className="grid gap-4 md:grid-cols-2">
+                    <Field label="Montant USD"><Input name="amount" type="number" min="1" required /></Field>
+                    <Field label="Méthode"><Select name="method"><option>Mobile Money</option><option>Banque</option><option>Paiement manuel</option></Select></Field>
+                    <Field label="Destination"><Input name="destination" required placeholder="Telephone ou compte bancaire" /></Field>
+                    <div className="flex items-end"><Button className="w-full"><ArrowRight className="h-4 w-4" /> Demander retrait</Button></div>
+                  </form>
+                  <div className="mt-5 space-y-3">
+                    {state.withdrawals.map((withdrawal) => (
+                      <div key={withdrawal.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="font-black">{currency(withdrawal.amount)} · {withdrawal.method}</p>
+                            <p className="text-sm text-slate-600">{withdrawal.destination}</p>
+                          </div>
+                          <Badge>{withdrawal.status}</Badge>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Button variant="light" onClick={() => moderateWithdrawal(withdrawal.id, 'PAID')}>Valider finance</Button>
+                          <Button variant="danger" onClick={() => moderateWithdrawal(withdrawal.id, 'REJECTED')}>Rejeter</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+
+                <Panel title="Règles de commission" icon={ReceiptText}>
+                  <div className="space-y-3">
+                    {state.commissionRules.map((rule) => (
+                      <div key={rule.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-black">{rule.scope} · {rule.target}</p>
+                            <p className="text-sm text-slate-600">Ville : {rule.city}</p>
+                          </div>
+                          <span className="text-2xl font-black text-emerald-700">{rule.rate}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
+            </div>
+          )}
+
+          {active === 'kyc' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <Panel title="Soumettre KYC" icon={FileCheck2}>
+                <form action={submitKyc} className="space-y-4">
+                  <Field label="Type"><Select name="type"><option>Particulier</option><option>Entreprise</option></Select></Field>
+                  <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+                    <b>Particulier :</b> carte d’identité + selfie.<br />
+                    <b>Entreprise :</b> RCCM, ID Nat, numéro fiscal, adresse.
+                  </div>
+                  <Button className="w-full"><FileCheck2 className="h-4 w-4" /> Envoyer dossier</Button>
+                </form>
+              </Panel>
+              <Panel title="Validation identité" icon={UserCheck}>
+                <div className="grid gap-3">
+                  {state.kyc.map((record) => {
+                    const user = state.users.find((item) => item.id === record.userId);
+                    return (
+                      <div key={record.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black">{user?.name || record.userId}</p>
+                            <p className="mt-1 text-sm text-slate-600">{record.type} · {record.city} · {record.documents.join(', ')}</p>
+                          </div>
+                          <Badge>{record.status}</Badge>
+                        </div>
+                        <div className="mt-4 flex gap-2">
+                          <Button variant="light" onClick={() => updateCollection('kyc', record.id, { status: 'VERIFIED' })}>Valider</Button>
+                          <Button variant="danger" onClick={() => updateCollection('kyc', record.id, { status: 'REJECTED' })}>Rejeter</Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'messaging' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <Panel title="Nouveau message" icon={MessageCircle}>
+                <form action={sendMessage} className="space-y-4">
+                  <Field label="Canal"><Select name="channel"><option>Acheteur ↔ Vendeur</option><option>Client ↔ Chauffeur</option><option>Client ↔ Support</option><option>Administration ↔ Utilisateur</option></Select></Field>
+                  <Field label="Destinataire"><Input name="to" required defaultValue="Support Nexora" /></Field>
+                  <Field label="Message"><Textarea name="text" required /></Field>
+                  <Button className="w-full"><Mail className="h-4 w-4" /> Envoyer</Button>
+                </form>
+              </Panel>
+              <Panel title="Boîte de messagerie" icon={MessageCircle}>
+                <div className="space-y-3">
+                  {state.messages.map((message) => (
+                    <div key={message.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="font-black">{message.channel}</p>
+                          <p className="mt-1 text-sm text-slate-600">{message.from} → {message.to}</p>
+                        </div>
+                        <Badge>{message.status}</Badge>
+                      </div>
+                      <p className="mt-3 text-sm font-medium text-slate-800">{message.text}</p>
+                      <Button className="mt-3" variant="light" onClick={() => updateCollection('messages', message.id, { status: 'CLOSED' })}>Clôturer</Button>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'profile' && (
+            <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+              <Panel title="Mon profil" icon={UserCircle}>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+                    {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} alt="" className="h-full w-full object-cover" /> : <UserCircle className="h-12 w-12 text-slate-400" />}
+                  </div>
+                  <div>
+                    <p className="font-black">{currentUser.name}</p>
+                    <p className="text-sm font-semibold text-slate-600">{currentUser.role} · {currentUser.city}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Badge>{currentUser.kycStatus}</Badge>
+                      <Badge>{currentUser.status || 'ACTIVE'}</Badge>
+                    </div>
+                  </div>
+                </div>
+                <label className="mt-5 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-black text-slate-600 hover:border-emerald-400 hover:bg-emerald-50">
+                  <Upload className="h-4 w-4" />
+                  Importer photo de profil
+                  <input type="file" accept="image/*" className="hidden" onChange={uploadAvatar} />
+                </label>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Disponible</p><p className="mt-1 font-black">{currency(currentUser.availableBalance || 0)}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Bloque</p><p className="mt-1 font-black">{currency(currentUser.blockedBalance || 0)}</p></div>
+                </div>
+              </Panel>
+
+              <Panel title="Informations du compte" icon={FileCheck2}>
+                <form action={updateProfile} className="grid gap-4 md:grid-cols-2">
+                  <Field label="Nom"><Input name="name" required defaultValue={currentUser.name} /></Field>
+                  <Field label="Role"><Input value={currentUser.role} readOnly /></Field>
+                  <Field label="Email"><Input name="email" type="email" required defaultValue={currentUser.email} /></Field>
+                  <Field label="Telephone"><Input name="phone" required defaultValue={currentUser.phone} /></Field>
+                  <Field label="Ville"><Select name="city" defaultValue={currentUser.city}>{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <Field label="Entreprise"><Input name="companyName" defaultValue={currentUser.companyName || ''} /></Field>
+                  <Field label="Adresse"><Input name="address" defaultValue={currentUser.address || ''} /></Field>
+                  <div className="flex items-end gap-2">
+                    <Button className="w-full"><UserCheck className="h-4 w-4" /> Sauvegarder</Button>
+                  </div>
+                </form>
+                <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-black">Securite compte</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-600">La prochaine etape backend active mot de passe chiffre, session serveur, OTP et validation email/SMS.</p>
+                </div>
+              </Panel>
+            </div>
+          )}
+
+          {active === 'admin' && (
+            <div className="space-y-6">
+              <Panel title="Session, rôle et périmètre ville" icon={ShieldCheck}>
+                <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+                  <Field label="Utilisateur simulé">
+                    <Select value={state.currentUserId} onChange={(event) => patch({ currentUserId: event.target.value })}>
+                      {state.users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role} · {user.city}</option>)}
+                    </Select>
+                  </Field>
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Périmètre actif</p>
+                    <p className="mt-1 font-black">{isNationalScope ? 'Toutes les villes RDC' : currentUser.city}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-600">{currentUser.role}</p>
+                  </div>
+                </div>
+              </Panel>
+              <Panel title="Créer un compte unique" icon={Users}>
+                <form action={addUser} className="grid gap-4 md:grid-cols-3">
+                  <Field label="Nom"><Input name="name" required /></Field>
+                  <Field label="Rôle"><Select name="role">{roles.map((role) => <option key={role}>{role}</option>)}</Select></Field>
+                  <Field label="Ville"><Select name="city">{cities.map((city) => <option key={city}>{city}</option>)}</Select></Field>
+                  <Field label="Téléphone"><Input name="phone" required /></Field>
+                  <Field label="Email"><Input name="email" type="email" required /></Field>
+                  <div className="flex items-end"><Button className="w-full"><Plus className="h-4 w-4" /> Créer utilisateur</Button></div>
+                </form>
+              </Panel>
+
+              <div className="grid gap-6 xl:grid-cols-2">
+                <Panel title="Utilisateurs et rôles" icon={ShieldCheck}>
+                  <div className="space-y-3">
+                    {scopedUsers.map((user) => (
+                      <div key={user.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-black">{user.name}</p>
+                            <p className="text-sm text-slate-600">{user.email} · {user.city}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge>{user.role}</Badge>
+                            <Badge>{user.kycStatus}</Badge>
+                            <Badge>{user.status || 'ACTIVE'}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+
+                <Panel title="Sécurité système" icon={Lock}>
+                  <div className="grid gap-3">
+                    {[
+                      'JWT + Refresh token',
+                      'OTP SMS et OTP Email',
+                      'Authentification à deux facteurs',
+                      'RBAC multi-rôles',
+                      'Audit logs',
+                      'Anti-fraude et rate limiting',
+                      'Protection XSS / CSRF / injection',
+                      'Sauvegardes automatiques',
+                    ].map((item) => (
+                      <div key={item} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                        <span className="font-bold">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-4 gap-12 mb-12">
-          <div className="md:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
-              <img src={SITE_CONFIG.logo} alt="NEXORA" className="h-10 w-10" />
-              <span className="font-bold text-xl">NEXORA</span>
+      {selectedProduct && (
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="mx-auto max-w-5xl rounded-lg bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 p-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Fiche produit</p>
+                <h3 className="text-xl font-black">{selectedProduct.name}</h3>
+              </div>
+              <button onClick={() => setSelectedProductId('')} className="rounded-lg border border-slate-200 p-2"><X className="h-5 w-5" /></button>
             </div>
-            <p className="text-gray-400 mb-6 max-w-sm">{t.footer.slogan}</p>
-            <div className="space-y-2 text-gray-400 text-sm">
-              {SITE_CONFIG.contact.phones.slice(0, 2).map((p, i) => <p key={i}>{p}</p>)}
-              <p>{SITE_CONFIG.contact.email}</p>
+            <div className="grid gap-6 p-5 lg:grid-cols-[1fr_380px]">
+              <div>
+                <img src={selectedProduct.imageUrl || imageForCategory(selectedProduct.category)} alt="" className="h-80 w-full rounded-lg bg-slate-100 object-cover" />
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Categorie</p><p className="mt-1 font-black">{selectedProduct.category}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Origine</p><p className="mt-1 font-black">{selectedProduct.origin || 'RDC'}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Delai</p><p className="mt-1 font-black">{selectedProduct.leadTime || 'A negocier'}</p></div>
+                </div>
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="font-black text-emerald-900">Trade Assurance Nexora</p>
+                  <p className="mt-1 text-sm font-semibold text-emerald-800">Paiement escrow, fournisseur verifie, preuve de livraison et litige arbitre par Nexora.</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-bold text-slate-500">Prix detail</p>
+                      <p className="text-3xl font-black text-slate-950">{currency(selectedProduct.price)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-slate-500">Prix gros</p>
+                      <p className="text-xl font-black text-emerald-700">{currency(selectedProduct.wholesalePrice || selectedProduct.price)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                    <p><span className="block text-xs font-bold text-slate-500">MOQ</span><b>{selectedProduct.moq || 1}</b></p>
+                    <p><span className="block text-xs font-bold text-slate-500">Stock</span><b>{selectedProduct.stock}</b></p>
+                    <p><span className="block text-xs font-bold text-slate-500">SKU</span><b>{selectedProduct.sku}</b></p>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  {(() => {
+                    const supplier = state.users.find((user) => user.id === selectedProduct.sellerId);
+                    return (
+                      <>
+                        <p className="text-xs font-bold text-slate-500">Fournisseur</p>
+                        <p className="mt-1 font-black">{supplier?.name || selectedProduct.sellerId}</p>
+                        <p className="text-sm font-semibold text-slate-600">{supplier?.city || selectedProduct.city} · {supplier?.supplierLevel || supplier?.kycStatus || 'STANDARD'}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Badge>{supplier?.kycStatus || 'PENDING'}</Badge>
+                          <Badge>{selectedProduct.tradeAssurance ? 'TRADE_ASSURANCE' : 'DIRECT'}</Badge>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="grid gap-2">
+                  <Button onClick={() => addToCart(selectedProduct)}><Plus className="h-4 w-4" /> Ajouter au panier</Button>
+                  <Button variant="light" onClick={() => createRfqFromProduct(selectedProduct)}><ReceiptText className="h-4 w-4" /> Demander prix de gros</Button>
+                  <Button variant="light" onClick={() => contactSupplierForProduct(selectedProduct)}><MessageCircle className="h-4 w-4" /> Contacter fournisseur</Button>
+                </div>
+              </div>
             </div>
-          </div>
-          <div>
-            <h4 className="font-semibold text-lg mb-4">{locale === 'fr' ? 'Services' : 'Services'}</h4>
-            <ul className="space-y-3 text-gray-400">
-              <li><button onClick={() => setCurrentPage('services')} className="hover:text-white transition-colors">{locale === 'fr' ? 'Développement' : 'Development'}</button></li>
-              <li><button onClick={() => setCurrentPage('starlink')} className="hover:text-white transition-colors">Starlink</button></li>
-              <li><button onClick={() => setCurrentPage('shop')} className="hover:text-white transition-colors">{locale === 'fr' ? 'Boutique' : 'Shop'}</button></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold text-lg mb-4">{locale === 'fr' ? 'Entreprise' : 'Company'}</h4>
-            <ul className="space-y-3 text-gray-400">
-              <li><button onClick={() => setCurrentPage('about')} className="hover:text-white transition-colors">{locale === 'fr' ? 'À propos' : 'About'}</button></li>
-              <li><button onClick={() => setCurrentPage('portfolio')} className="hover:text-white transition-colors">Portfolio</button></li>
-              <li><button onClick={() => setCurrentPage('contact')} className="hover:text-white transition-colors">Contact</button></li>
-            </ul>
           </div>
         </div>
-        <div className="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
-          © {new Date().getFullYear()} NEXORA Technologies & Networks. {t.footer.rights}.
+      )}
+
+      {selectedSupplier && (
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="mx-auto max-w-4xl rounded-lg bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 p-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Boutique fournisseur</p>
+                <h3 className="text-xl font-black">{selectedSupplier.name}</h3>
+              </div>
+              <button onClick={() => setSelectedSupplierId('')} className="rounded-lg border border-slate-200 p-2"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-5">
+              <div className="grid gap-4 md:grid-cols-4">
+                <Metric icon={BadgeCheck} label="KYC" value={selectedSupplier.kycStatus} note={selectedSupplier.supplierLevel || 'STANDARD'} />
+                <Metric icon={ShoppingBag} label="Produits" value={state.products.filter((product) => product.sellerId === selectedSupplier.id).length} note="Catalogue actif" />
+                <Metric icon={MapPin} label="Ville" value={selectedSupplier.city} note={selectedSupplier.address || 'Adresse'} />
+                <Metric icon={Wallet} label="Escrow" value={currency(selectedSupplier.blockedBalance || 0)} note="Fonds bloques" />
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {state.products.filter((product) => product.sellerId === selectedSupplier.id).map((product) => (
+                  <button key={product.id} onClick={() => setSelectedProductId(product.id)} className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-left hover:border-emerald-300">
+                    <img src={product.imageUrl || imageForCategory(product.category)} alt="" className="h-20 w-24 rounded-lg object-cover" />
+                    <span>
+                      <b className="block">{product.name}</b>
+                      <span className="text-sm font-semibold text-slate-600">MOQ {product.moq || 1} · {currency(product.wholesalePrice || product.price)}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </footer>
-  );
-}
-
-// ============ WHATSAPP BUTTON ============
-function WhatsAppButton() {
-  return (
-    <a href={`https://wa.me/${SITE_CONFIG.contact.whatsapp}`} target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/30 hover:scale-110 transition-all">
-      <MessageCircle className="w-7 h-7 text-white" />
-    </a>
-  );
-}
-
-// ============ MAIN APP ============
-export default function App() {
-  const [locale, setLocale] = useState('fr');
-  const [currentPage, setCurrentPage] = useState('home');
-
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [currentPage]);
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'home': return <HomePage locale={locale} setCurrentPage={setCurrentPage} />;
-      case 'services': return <ServicesPage locale={locale} setCurrentPage={setCurrentPage} />;
-      case 'portfolio': return <PortfolioPage locale={locale} />;
-      case 'shop': return <ShopPage locale={locale} setCurrentPage={setCurrentPage} />;
-      case 'cart': return <CartPage locale={locale} setCurrentPage={setCurrentPage} />;
-      case 'starlink': return <StarlinkPage locale={locale} />;
-      case 'about': return <AboutPage locale={locale} />;
-      case 'contact': return <ContactPage locale={locale} />;
-      case 'portal': return <PortalPage locale={locale} />;
-      default: return <HomePage locale={locale} setCurrentPage={setCurrentPage} />;
-    }
-  };
-
-  return (
-    <AuthProvider>
-      <CartProvider>
-        <main className="min-h-screen">
-          <Navigation locale={locale} setLocale={setLocale} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-          {renderPage()}
-          {!['portal', 'cart'].includes(currentPage) && <Footer locale={locale} setCurrentPage={setCurrentPage} />}
-          <WhatsAppButton />
-          <ChatWidget locale={locale} />
-        </main>
-      </CartProvider>
-    </AuthProvider>
+      )}
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-2 py-2 shadow-2xl backdrop-blur lg:hidden">
+        <div className="grid grid-cols-5 gap-1">
+          {[
+            { id: 'home', label: 'Accueil', icon: HomeIcon },
+            { id: 'market', label: 'Market', icon: ShoppingBag },
+            { id: 'rfq', label: 'Devis', icon: ReceiptText },
+            { id: 'wallet', label: 'Wallet', icon: Wallet },
+            { id: 'profile', label: 'Profil', icon: UserCircle },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button key={item.id} onClick={() => setActive(item.id)} className={`flex flex-col items-center justify-center rounded-lg px-2 py-2 text-[11px] font-black ${active === item.id ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500'}`}>
+                <Icon className="h-5 w-5" />
+                <span className="mt-1">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </main>
   );
 }
